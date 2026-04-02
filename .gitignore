@@ -1,0 +1,10 @@
+# Java tooling sub-repos (cloned by agents as needed)
+eclipse.jdt.core/
+eclipse.jdt.ls/
+java-debug/
+vscode-gradle/
+vscode-java/
+vscode-java-debug/
+vscode-java-dependency/
+vscode-java-test/
+vscode-maven/
