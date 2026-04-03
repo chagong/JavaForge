@@ -17,6 +17,7 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 | `java-debug/` | Java Debug Server — DAP server over JDI (Java) | https://github.com/microsoft/java-debug |
 | `vscode-java-test/` | Test Runner for Java — VS Code Testing API integration (TypeScript + Java) | https://github.com/microsoft/vscode-java-test |
 | `vscode-gradle/` | Gradle for Java — project management, task runner, `.gradle` editing (TypeScript + Java) | https://github.com/microsoft/vscode-gradle |
+| `vscode-gradle/extension/build-server-for-gradle/` | Build Server for Gradle — BSP server, sub-project of vscode-gradle (Java) | https://github.com/microsoft/build-server-for-gradle |
 | `vscode-java-dependency/` | Project Manager for Java — project explorer, library management, JAR export (TypeScript + Java) | https://github.com/microsoft/vscode-java-dependency |
 | `vscode-maven/` | Maven for Java — project explorer, POM editing, lifecycle execution (TypeScript + Java) | https://github.com/microsoft/vscode-maven |
 
