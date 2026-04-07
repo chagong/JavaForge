@@ -14,8 +14,8 @@ For each repo directory, do the following:
 2. Run `git remote -v` to identify the upstream remote (the one pointing to the canonical/org repo, typically named `origin`).
 3. Identify the default branch by running `git symbolic-ref refs/remotes/origin/HEAD` (fall back to `main` or `master` if that fails).
 4. Fetch from the upstream remote: `git fetch origin`.
-5. If the currently checked-out branch is the default branch, fast-forward it: `git merge --ff-only origin/<default-branch>`.
-6. If on a feature branch, just report the fetch was done (do not auto-rebase feature branches without asking).
+5. If the currently checked-out branch **is** the default branch, fast-forward it: `git merge --ff-only origin/<default-branch>`.
+6. If the currently checked-out branch is **not** the default branch, stash any changes if needed, check out the default branch, fast-forward it (`git merge --ff-only origin/<default-branch>`), then check out the original branch again and restore the stash. Report both the default-branch update result and the fact the working branch was preserved.
 
 Process repos one at a time. After finishing all repos, print a summary table showing:
 - Repo name
