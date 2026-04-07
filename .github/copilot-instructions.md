@@ -20,6 +20,8 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 | `vscode-gradle/extension/build-server-for-gradle/` | Build Server for Gradle — BSP server, sub-project of vscode-gradle (Java) | https://github.com/microsoft/build-server-for-gradle |
 | `vscode-java-dependency/` | Project Manager for Java — project explorer, library management, JAR export (TypeScript + Java) | https://github.com/microsoft/vscode-java-dependency |
 | `vscode-maven/` | Maven for Java — project explorer, POM editing, lifecycle execution (TypeScript + Java) | https://github.com/microsoft/vscode-maven |
+| `vscode-spring-initializr/` | Spring Initializr Java Support — Spring Boot project scaffolding, dependency management (TypeScript) | https://github.com/microsoft/vscode-spring-initializr |
+| `vscode-spring-boot-dashboard/` | Spring Boot Dashboard — app lifecycle management, beans/endpoints explorer (TypeScript + Java) | https://github.com/microsoft/vscode-spring-boot-dashboard |
 
 ---
 
@@ -33,12 +35,16 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 | `vscjava.vscode-gradle` | Gradle for Java | `vscode-gradle/` | (Java servers in same repo) |
 | `vscjava.vscode-java-dependency` | Project Manager for Java | `vscode-java-dependency/` | (Java plugin in same repo) |
 | `vscjava.vscode-maven` | Maven for Java | `vscode-maven/` | (Java plugin in same repo) |
+| `vscjava.vscode-spring-initializr` | Spring Initializr Java Support | `vscode-spring-initializr/` | — |
+| `vscjava.vscode-spring-boot-dashboard` | Spring Boot Dashboard | `vscode-spring-boot-dashboard/` | (Java plugin in same repo) |
 
 ### Extension Dependency Chain
 
 - `vscode-java-test` → depends on `redhat.java` + `vscjava.vscode-java-debug`
 - `vscode-java-debug` → depends on `redhat.java`
 - `vscode-gradle`, `vscode-java-dependency`, `vscode-maven` → runtime integration with `redhat.java` (no hard dependency)
+- `vscode-spring-boot-dashboard` → depends on `vmware.vscode-spring-boot` + `redhat.java` + `vscjava.vscode-java-debug`
+- `vscode-spring-initializr` → standalone (no hard dependency)
 - `redhat.java` → embeds `eclipse.jdt.ls` which depends on `eclipse.jdt.core`
 
 ---
@@ -62,6 +68,8 @@ Every repo has unit tests that must pass locally before submitting a PR.
 | `vscode-gradle` | `./gradlew build testVsCode` | Mocha + JUnit + Gradle | Build JARs first: `cd extension && ../gradlew buildJars` |
 | `vscode-java-dependency` | `npm run build-server && npm test` | Mocha + Maven | Build Java plugin first |
 | `vscode-maven` | `npm run build-plugin && npm test` | Mocha + Maven | Build Java plugin first |
+| `vscode-spring-initializr` | `npm test` | Mocha | — |
+| `vscode-spring-boot-dashboard` | `npm test` | Mocha | Build Java plugin first: `npm run prepublish` |
 
 ### 2. UI Tests Must Pass (Where Applicable)
 
@@ -86,6 +94,8 @@ Every repo runs CI on pull requests. A PR cannot be merged until all CI checks a
 | `vscode-gradle` | `main.yml` — build, lint, test, SonarQube analysis | Ubuntu |
 | `vscode-java-dependency` | `linux.yml`, `windows.yml`, `macOS.yml`, `linuxUI.yml`, `windowsUI.yml` | Linux, Windows, macOS |
 | `vscode-maven` | `linux.yml`, `windows.yml`, `macOS.yml` | Linux, Windows, macOS |
+| `vscode-spring-initializr` | Azure Pipelines | — |
+| `vscode-spring-boot-dashboard` | Azure Pipelines | — |
 
 ### 4. Code Style & Linting
 
@@ -97,6 +107,8 @@ Every repo runs CI on pull requests. A PR cannot be merged until all CI checks a
 | `vscode-gradle` | `./gradlew lint` (Prettier) | Prettier |
 | `vscode-java-dependency` | `npm run tslint` | TSLint |
 | `vscode-maven` | `npm run tslint` | TSLint |
+| `vscode-spring-initializr` | `npm run tslint` | TSLint |
+| `vscode-spring-boot-dashboard` | `npm run tslint` | ESLint |
 | `eclipse.jdt.core` | `./mvnw checkstyle:check` | Checkstyle |
 | `java-debug` | `./mvnw checkstyle:check` | Checkstyle |
 

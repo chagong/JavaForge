@@ -8,3 +8,6 @@ vscode-java-debug/
 vscode-java-dependency/
 vscode-java-test/
 vscode-maven/
+vscode-spring-initializr/
+vscode-spring-boot-dashboard/
+logs/
