@@ -119,6 +119,8 @@ Every repo runs CI on pull requests. A PR cannot be merged until all CI checks a
 
 ### 6. Cross-Repo Impact Awareness
 
+**Always use the canonical repo list** from the "Repositories in This Workspace" table above when performing cross-repo tasks (e.g., auditing Dependabot alerts, checking CI status, searching for patterns). Do **not** rely on which directories happen to exist locally — the workspace may contain only a subset of the repos. For repos not cloned locally, use GitHub API tools (MCP, `gh`, or skill scripts) to query them, and clone only when changes are needed.
+
 Many features span multiple repos. Be aware of these common patterns:
 - **Language features** (completion, diagnostics, refactoring): Changes typically go in `eclipse.jdt.core` or `eclipse.jdt.ls`, exposed to VS Code via `vscode-java`.
 - **Debug features**: Client-side in `vscode-java-debug`, server-side in `java-debug`.
