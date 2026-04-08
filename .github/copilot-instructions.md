@@ -2,7 +2,7 @@
 
 This workspace is a development environment for coding agents (GitHub Copilot, Claude Code, etc.) to work on **Java tooling for VS Code**. It may contain any subset of the repositories listed below — agents should clone the repos they need for the task at hand.
 
-For detailed architecture, internal APIs, module maps, and communication patterns, see [Java-Tooling-Architecture.md](../Java-Tooling-Architecture.md).
+For detailed architecture, internal APIs, module maps, and communication patterns, see [Java-Tooling-Architecture.md](../javatooling-architecture.md).
 
 ---
 
@@ -125,3 +125,9 @@ Many features span multiple repos. Be aware of these common patterns:
 - **Test features**: Client-side in `vscode-java-test`, JDTLS plugin in the same repo.
 - **Build tool features**: Maven in `vscode-maven`, Gradle in `vscode-gradle`, both integrate with `eclipse.jdt.ls` via JDTLS plugins.
 - **JDTLS plugins**: Extensions contribute JARs via `contributes.javaExtensions` in `package.json`, loaded by `redhat.java` at startup. Changes to plugin APIs may require coordinated PRs across repos.
+
+---
+
+## Self-Evolution
+
+When the user corrects your approach or you discover a gap in the agent configuration, **update the relevant config files** (instructions, skills, prompts) to prevent the same mistake in future sessions. See `.github/instructions/self-evolution.instructions.md` for the procedure and config manifest.

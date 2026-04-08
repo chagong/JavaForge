@@ -24,6 +24,9 @@ When writing comments on GitHub issues or pull requests, follow these rules:
 - Link to relevant code, files, or other issues when helpful
 - Use bullet points only when listing multiple items
 
+## Markdown Formatting
+- When passing markdown content to GitHub API tools (PR body, issue body, comments), use **actual newlines** — never use escaped `\n` literals in the string. Escaped newlines render as visible `\n` text instead of line breaks.
+
 ## What NOT to do
 - Don't repeat the issue title or PR description back
 - Don't write paragraphs when a sentence will do
