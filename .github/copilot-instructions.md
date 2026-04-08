@@ -20,6 +20,7 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 | `vscode-gradle/extension/build-server-for-gradle/` | Build Server for Gradle — BSP server, sub-project of vscode-gradle (Java) | https://github.com/microsoft/build-server-for-gradle |
 | `vscode-java-dependency/` | Project Manager for Java — project explorer, library management, JAR export (TypeScript + Java) | https://github.com/microsoft/vscode-java-dependency |
 | `vscode-maven/` | Maven for Java — project explorer, POM editing, lifecycle execution (TypeScript + Java) | https://github.com/microsoft/vscode-maven |
+| `vscode-java-pack/` | Extension Pack for Java — bundles all Java extensions, walkthrough, tips (TypeScript) | https://github.com/microsoft/vscode-java-pack |
 | `vscode-spring-initializr/` | Spring Initializr Java Support — Spring Boot project scaffolding, dependency management (TypeScript) | https://github.com/microsoft/vscode-spring-initializr |
 | `vscode-spring-boot-dashboard/` | Spring Boot Dashboard — app lifecycle management, beans/endpoints explorer (TypeScript + Java) | https://github.com/microsoft/vscode-spring-boot-dashboard |
 
@@ -35,6 +36,7 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 | `vscjava.vscode-gradle` | Gradle for Java | `vscode-gradle/` | (Java servers in same repo) |
 | `vscjava.vscode-java-dependency` | Project Manager for Java | `vscode-java-dependency/` | (Java plugin in same repo) |
 | `vscjava.vscode-maven` | Maven for Java | `vscode-maven/` | (Java plugin in same repo) |
+| `vscjava.vscode-java-pack` | Extension Pack for Java | `vscode-java-pack/` | — (pack only, no backend) |
 | `vscjava.vscode-spring-initializr` | Spring Initializr Java Support | `vscode-spring-initializr/` | — |
 | `vscjava.vscode-spring-boot-dashboard` | Spring Boot Dashboard | `vscode-spring-boot-dashboard/` | (Java plugin in same repo) |
 
@@ -45,6 +47,7 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 - `vscode-gradle`, `vscode-java-dependency`, `vscode-maven` → runtime integration with `redhat.java` (no hard dependency)
 - `vscode-spring-boot-dashboard` → depends on `vmware.vscode-spring-boot` + `redhat.java` + `vscjava.vscode-java-debug`
 - `vscode-spring-initializr` → standalone (no hard dependency)
+- `vscode-java-pack` → extension pack that bundles all of the above; also contributes walkthroughs and Getting Started content
 - `redhat.java` → embeds `eclipse.jdt.ls` which depends on `eclipse.jdt.core`
 
 ---
