@@ -11,4 +11,4 @@ vscode-maven/
 vscode-java-pack/
 vscode-spring-initializr/
 vscode-spring-boot-dashboard/
-logs/
+logs/*
