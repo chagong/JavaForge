@@ -13,3 +13,4 @@ vscode-spring-initializr/
 vscode-spring-boot-dashboard/
 logs/*
 !logs/.gitkeep
+.env
