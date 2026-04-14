@@ -55,7 +55,7 @@ For the full JSON schema, see [references/payload-schema.json](references/payloa
 ## Workflow
 
 1. Receive JSON payload from user or another skill/agent
-2. Validate that `PERSONAL_NOTIFICATION_URL` environment variable is set
+2. **BLOCKING: Check that `PERSONAL_NOTIFICATION_URL` is set** — run `echo $env:PERSONAL_NOTIFICATION_URL` (PowerShell) or `echo $PERSONAL_NOTIFICATION_URL` (bash) and confirm it is non-empty. If it is empty or not set, **stop and ask the user** to provide the URL before proceeding. Do NOT attempt to send without a valid URL.
 3. Validate that required fields are present (especially `recipient`)
 4. POST the JSON payload to the Logic App endpoint
 5. Report success or failure to the user
