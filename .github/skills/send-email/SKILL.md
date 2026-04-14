@@ -127,3 +127,11 @@ curl -X POST "$MAILING_URL" \
 - **HTTP 4xx/5xx**: Failed to send email ❌
 
 Report the result to the user with the HTTP status code.
+
+### CRITICAL: Never Retry Without Confirming Failure
+
+**HTTP POST requests are not idempotent.** Each call sends a real email. If the terminal output appears truncated or incomplete, **do NOT re-send the request**. Instead:
+
+1. Check the HTTP status code variable (e.g., `$sc` in PowerShell) in a **separate** follow-up command.
+2. Only retry if you confirmed a non-2xx status code or a connection error.
+3. If the status is ambiguous (no output at all), ask the user before retrying — they may have already received the email.
