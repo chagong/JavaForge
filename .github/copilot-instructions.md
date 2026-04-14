@@ -84,7 +84,7 @@ Some repos have dedicated UI test workflows that validate end-to-end behavior:
 
 ### 3. PR CI Checks Must Pass
 
-Every repo runs CI on pull requests. A PR cannot be merged until all CI checks are green.
+Every repo runs CI on pull requests. A PR cannot be merged until all CI checks are green. Always check the CI status on GitHub after pushing commits, and investigate any failures before requesting reviews.
 
 | Repo | CI Workflows | Platforms |
 |------|-------------|-----------|
