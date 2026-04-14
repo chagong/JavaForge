@@ -23,4 +23,4 @@ Process repos one at a time. After finishing all repos, print a summary table sh
 - Upstream remote used
 - Result (updated / already up-to-date / on feature branch / error)
 
-If any repo has uncommitted changes, skip the merge for that repo and note it in the summary.
+If any repo has uncommitted **tracked** changes (modified or staged files), skip the merge for that repo and note it in the summary. **Untracked files** (e.g., nested git repos appearing as `??` in `git status`) should **not** cause a skip — use `git status --porcelain` filtered to exclude lines starting with `??`.
