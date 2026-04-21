@@ -11,6 +11,9 @@ vscode-maven/
 vscode-java-pack/
 vscode-spring-initializr/
 vscode-spring-boot-dashboard/
+m2e-core/
 logs/*
 !logs/.gitkeep
+scratch/*
+!scratch/.gitkeep
 .env

@@ -6,6 +6,12 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 
 ---
 
+## Scratch Folder
+
+The `scratch/` directory is a gitignored workspace for temporary files — extracted JARs, patched binaries, build artifacts for local testing, etc. Always use `scratch/` instead of creating ad-hoc folders in the workspace root. Contents are excluded from version control; only `.gitkeep` is tracked.
+
+---
+
 ## Repositories in This Workspace
 
 | Folder | Role | Repository |
