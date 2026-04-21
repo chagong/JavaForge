@@ -1,9 +1,9 @@
 ---
-name: send-personal-notification
-description: Send personal notifications to individuals via Teams personal chat using Azure Logic App. Use when (1) sending any message to a person's Teams chat, (2) delivering reports, summaries, or alerts to specific recipients, (3) notifying someone about updates, results, or action items. Triggers on requests like "send personal notification", "notify user", "send message to", "personal message".
+name: send-teams-notification
+description: Send personal notifications to individuals via Teams personal chat using Azure Logic App. Use when (1) sending any message to a person's Teams chat, (2) delivering reports, summaries, or alerts to specific recipients, (3) notifying someone about updates, results, or action items. Triggers on requests like "send teams notification", "notify user", "send message to", "teams message".
 ---
 
-# Send Personal Notification Skill
+# Send Teams Notification Skill
 
 Send messages to Microsoft Teams personal chat via an Azure Logic App HTTP trigger.
 
@@ -62,10 +62,10 @@ For the full JSON schema, see [references/payload-schema.json](references/payloa
 
 ## Example Commands
 
-- "Send a personal notification to user@example.com about the build results"
+- "Send a Teams notification to user@example.com about the build results"
 - "Notify john@company.com that the release is ready for review"
 - "Send a message to the assignee with the test failure details"
-- "Send this triage summary as a personal notification to user@example.com"
+- "Send this triage summary as a Teams notification to user@example.com"
 
 ## Implementation
 
@@ -83,7 +83,7 @@ curl -X POST "$PERSONAL_NOTIFICATION_URL" \
 
 ## Response Handling
 
-- **HTTP 2xx**: Personal notification sent successfully ✅
+- **HTTP 2xx**: Teams notification sent successfully ✅
 - **HTTP 4xx/5xx**: Failed to send notification ❌
 
 Report the result to the user with the HTTP status code.
@@ -97,17 +97,3 @@ Report the result to the user with the HTTP status code.
 3. If the status is ambiguous (no output at all), ask the user before retrying — they may have already received the message.
 
 ## Integration with Other Skills
-
-This skill can be combined with any workflow or agent that produces output for a specific person:
-
-- **Triage reports**: A triage agent generates a summary, then this skill delivers it to the responsible person
-- **Build/release notifications**: Notify a developer when their build completes or a release is published
-- **Code review reminders**: Send a reminder to review a pending PR
-- **Custom alerts**: Any agent or workflow can use this skill to deliver targeted messages
-
-General flow:
-
-1. An agent or workflow produces content to share
-2. User requests "send personal notification" with recipient and message
-3. This skill POSTs to the Logic App
-4. Recipient receives a Teams message from the workflow bot
