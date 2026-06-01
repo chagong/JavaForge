@@ -1,0 +1,11 @@
+{
+  "name": "vscode-probe-skill",
+  "version": "1.0.0",
+  "description": "Skill dependencies for vscode-probe: launch VS Code with CDP for playwright-cli automation",
+  "scripts": {
+    "launch": "node scripts/launch-vscode.js"
+  },
+  "dependencies": {
+    "@vscode/test-electron": "^2.4.3"
+  }
+}
