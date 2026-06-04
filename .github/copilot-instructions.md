@@ -139,6 +139,12 @@ Many features span multiple repos. Be aware of these common patterns:
 
 ---
 
+## Commit Messages
+
+Always use [Conventional Commits](https://www.conventionalcommits.org/) when making commits (e.g., `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`). Use the format `<type>(<optional scope>): <description>`.
+
+---
+
 ## Self-Evolution
 
 When the user corrects your approach or you discover a gap in the agent configuration, **update the relevant config files** (instructions, skills, prompts) to prevent the same mistake in future sessions. See `.github/instructions/self-evolution.instructions.md` for the procedure and config manifest.
