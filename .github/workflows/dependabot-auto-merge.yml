@@ -1,0 +1,91 @@
+name: Dependabot Auto-Merge (Copilot CLI)
+
+# Runs on a daily schedule and uses the GitHub Copilot CLI to audit and safely
+# merge low-risk Dependabot pull requests across all Microsoft-managed Java
+# tooling repositories in this workspace.
+#
+# Requirements (two repository secrets):
+#   - `GH_PAT`: a Personal Access Token (classic or fine-grained) with
+#     `repo` + `pull_request` write access to every target microsoft/* repo.
+#     Used by the gh CLI and any GitHub API access (the default `GITHUB_TOKEN`
+#     cannot reach other repositories, so a PAT is mandatory). Wired into
+#     GH_TOKEN and GITHUB_TOKEN.
+#   - `COPILOT_CLI_TOKEN`: a token with a GitHub Copilot entitlement, used by
+#     the Copilot CLI itself. Wired into COPILOT_GITHUB_TOKEN. May be the same
+#     PAT as GH_PAT if that account also has a Copilot entitlement.
+
+on:
+  schedule:
+    # 06:00 UTC every day. Adjust as needed.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Audit and report only; do not approve or merge."
+        type: boolean
+        default: false
+
+# Prevent overlapping runs from racing on the same PRs.
+concurrency:
+  group: dependabot-auto-merge
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  manage-dependabot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # GH_PAT drives the gh CLI and GitHub API/MCP access (cross-repo write).
+      # COPILOT_CLI_TOKEN provides the Copilot CLI entitlement.
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+      DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}
+    steps:
+      - name: Checkout (for the prompt file)
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install GitHub Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Verify gh authentication
+        run: gh auth status
+
+      - name: Manage Dependabot PRs
+        run: |
+          PROMPT_FILE=".github/prompts/dependabot-auto-merge.prompt.md"
+          PROMPT="$(cat "$PROMPT_FILE")"
+          if [ "$DRY_RUN" = "true" ]; then
+            PROMPT="$PROMPT
+
+          DRY RUN MODE IS ENABLED: Do NOT approve, merge, comment on, or modify any pull request. Only audit and print the report."
+          fi
+          mkdir -p copilot-logs
+          copilot \
+            --allow-all \
+            --enable-all-github-mcp-tools \
+            --no-custom-instructions \
+            --no-ask-user \
+            --log-level debug \
+            --log-dir ./copilot-logs \
+            --share ./copilot-session.md \
+            --prompt "$PROMPT"
+
+      - name: Upload Copilot logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: copilot-logs
+          path: |
+            ./copilot-logs
+            ./copilot-session.md
+          if-no-files-found: ignore
+          retention-days: 14
