@@ -13,6 +13,10 @@ name: Dependabot Auto-Merge (Copilot CLI)
 #   - `COPILOT_CLI_TOKEN`: a token with a GitHub Copilot entitlement, used by
 #     the Copilot CLI itself. Wired into COPILOT_GITHUB_TOKEN. May be the same
 #     PAT as GH_PAT if that account also has a Copilot entitlement.
+#   - `PERSONAL_NOTIFICATION_URL`: Azure Logic App HTTP trigger URL used by the
+#     send-teams-notification skill to deliver the run summary to Teams.
+#   - `RECIPIENTS`: comma/semicolon-separated list of recipient email addresses
+#     for the Teams notification.
 
 on:
   schedule:
@@ -43,6 +47,10 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_PAT }}
       GITHUB_TOKEN: ${{ secrets.GH_PAT }}
       COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+      # Teams notification (send-teams-notification skill).
+      PERSONAL_NOTIFICATION_URL: ${{ secrets.PERSONAL_NOTIFICATION_URL }}
+      RECIPIENTS: ${{ secrets.RECIPIENTS }}
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}
     steps:
       - name: Checkout (for the prompt file)
@@ -63,6 +71,9 @@ jobs:
         run: |
           PROMPT_FILE=".github/prompts/dependabot-auto-merge.prompt.md"
           PROMPT="$(cat "$PROMPT_FILE")"
+          PROMPT="$PROMPT
+
+          The 'workflowRunUrl' for the Teams notification is ${WORKFLOW_RUN_URL}."
           if [ "$DRY_RUN" = "true" ]; then
             PROMPT="$PROMPT
 

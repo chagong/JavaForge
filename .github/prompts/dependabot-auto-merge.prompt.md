@@ -155,3 +155,18 @@ Print a concise summary with:
   pending checks, conflicts, non-manifest diff, etc.).
 - Any `@dependabot` commands posted (rebase / recreate / squash and merge), with
   the PR URL and why.
+
+## Send a Teams notification with the result
+
+After printing the report, use the `send-teams-notification` skill at
+`.github/skills/send-teams-notification/SKILL.md` to deliver the same summary to
+Teams. 
+
+- Send ONE notification per recipient: split `RECIPIENTS` on commas/semicolons,
+  trim whitespace, and POST the payload once per email address.
+- Build a Markdown `message` from the report above: counts of merged / left-open
+  PRs per repo, the merged PR URLs, the left-open PRs with reasons, and any
+  `@dependabot` commands posted. Keep it concise.
+- Use a `title` like `Dependabot triage — <N> merged, <M> open (<date>)`.
+- If `PERSONAL_NOTIFICATION_URL` or `RECIPIENTS` is empty, skip the notification
+  and note that in the printed report instead of failing.
