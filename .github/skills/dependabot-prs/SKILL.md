@@ -118,7 +118,6 @@ Use these commands for ordinary Dependabot PRs:
 | `@dependabot recreate` | Recreates the PR and overwrites edits made to the PR. Confirm before using if humans edited the branch. |
 | `@dependabot reopen` | Reopens a closed Dependabot PR. |
 | `@dependabot show DEPENDENCY_NAME ignore conditions` | Shows stored ignore conditions for a dependency. |
-| `@dependabot squash and merge` | Asks Dependabot to squash and merge once CI passes. |
 
 For grouped version update and grouped security update PRs, use dependency-specific commands:
 

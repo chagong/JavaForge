@@ -128,12 +128,11 @@ as a fallback). Match the command to the PR state:
 | PR state | Action |
 |----------|--------|
 | Conflicted / `DIRTY` merge state | Comment `@dependabot rebase`. If the branch is stale after a rebase and no human edits exist, `@dependabot recreate`. |
-| Safe and green but you want Dependabot to merge after CI | Comment `@dependabot squash and merge`. |
 | Superseded / obsolete duplicate update already covered by a newer PR | Comment `@dependabot recreate` on the newest one; leave older ones for the next run. |
 | Major bump you decide to defer (NOT auto-merge) | Leave it open and report. Do NOT `ignore`/`close` it — those discard the update permanently and need human intent. |
 
 Prefer direct approve + merge for clearly safe PRs. Use `@dependabot rebase` /
-`recreate` / `squash and merge` to unblock the rest. Re-running failed CI jobs
+`recreate` to unblock the rest. Re-running failed CI jobs
 is allowed when the failure is clearly transient/flaky (network reset, expired
 artifact); otherwise leave the PR for a later run.
 
@@ -153,7 +152,7 @@ Print a concise summary with:
 - PRs approved and merged, with URLs.
 - PRs left open, each with a one-line reason (major bump, failing checks,
   pending checks, conflicts, non-manifest diff, etc.).
-- Any `@dependabot` commands posted (rebase / recreate / squash and merge), with
+- Any `@dependabot` commands posted (rebase / recreate), with
   the PR URL and why.
 
 ## Send a Teams notification with the result
