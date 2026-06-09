@@ -65,6 +65,19 @@ action (e.g. ask Dependabot to rebase a conflicted PR) and report it.
    it up. After approving or after a `@dependabot rebase`/`recreate` (which
    re-triggers CI), poll again until all workflows complete before merging.
 
+   CI workflows sometimes fail intermittently. When polling finishes and one or
+   more checks ended in `FAILURE` / `CANCELLED` / `TIMED_OUT`, re-run the failed
+   jobs ONCE before treating the failure as real. Identify the run from the
+   failed check and re-run only its failed jobs:
+
+   ```
+   gh run rerun RUN_ID --repo OWNER/REPO --failed
+   ```
+
+   Then poll again until the rerun reaches a terminal state. If it is still red
+   after this single rerun, treat the failure as real: do NOT merge, leave the
+   PR open, and report it. Re-run the failed jobs at most once per PR per run.
+
 ## Safety rules — a PR is SAFE to merge ONLY when ALL are true
 
 - Author is `app/dependabot` or `dependabot[bot]`.
@@ -132,9 +145,9 @@ as a fallback). Match the command to the PR state:
 | Major bump you decide to defer (NOT auto-merge) | Leave it open and report. Do NOT `ignore`/`close` it — those discard the update permanently and need human intent. |
 
 Prefer direct approve + merge for clearly safe PRs. Use `@dependabot rebase` /
-`recreate` to unblock the rest. Re-running failed CI jobs
-is allowed when the failure is clearly transient/flaky (network reset, expired
-artifact); otherwise leave the PR for a later run.
+`recreate` to unblock the rest. When CI ends red, re-run the failed jobs once
+(see step 3) to absorb intermittent failures; if it is still red after that
+single rerun, leave the PR for a later run.
 
 ## Guardrails
 
