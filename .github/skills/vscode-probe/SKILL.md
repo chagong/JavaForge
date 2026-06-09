@@ -33,7 +33,7 @@ cd .github/skills/vscode-probe && npm install
 
 ## Step 0 — Create a run folder
 
-Before doing anything else, create a timestamped folder under `runs/` at the repo root. All screenshots and accessibility snapshots for this run go there. The final requirements document goes under `features/`.
+Before doing anything else, create a timestamped folder under `scratch/vscode-probe/runs/` (the gitignored scratch area). All screenshots and accessibility snapshots for this run are throwaway artifacts and go there — never in the repo root. The final requirements document goes under `features/`.
 
 ```bash
 # Generate a filesystem-safe timestamp: YYYYMMDD-HHmmss
@@ -43,7 +43,8 @@ RUN_TS=$(date +"%Y%m%d-%H%M%S")           # Linux/macOS
 # Derive a slug from the feature being probed (lowercase, hyphens)
 FEATURE_SLUG="<feature-slug>"             # e.g. "allow-commands"
 
-RUN_DIR="runs/${RUN_TS}-${FEATURE_SLUG}"
+# All scratch/run data lives under the repo's gitignored scratch/ folder
+RUN_DIR="scratch/vscode-probe/runs/${RUN_TS}-${FEATURE_SLUG}"
 mkdir -p "$RUN_DIR"
 echo "Run folder: $RUN_DIR"
 ```
@@ -73,7 +74,7 @@ EOF
 echo "Requirements file: $FEATURE_FILE"
 ```
 
-> **Rule**: every `--filename` argument in the steps below must be prefixed with `$RUN_DIR/`.  
+> **Rule**: every `--filename` argument in the steps below must be prefixed with `$RUN_DIR/`, so all raw screenshots and snapshots land under `scratch/vscode-probe/runs/…` and never pollute the repo tree.  
 > **Rule**: the final requirements document is saved as `features/${FEATURE_SLUG}.md`.  
 > **Rule**: key screenshots are copied to `features/screenshots/${FEATURE_SLUG}/` in Step 5 and linked from the Key Screenshots table using those paths.
 
@@ -99,8 +100,8 @@ VSCODE_PATH="C:\path\to\Code - Insiders.exe" node .github/skills/vscode-probe/sc
 > ```powershell
 > & 'C:\Users\<you>\AppData\Local\Programs\Microsoft VS Code\Code.exe' `
 >   --remote-debugging-port=9222 `
->   --user-data-dir='<repo>\scratch\cdp-user-data' `
->   --no-first-run '<repo>\<folder-to-open>'
+>   --user-data-dir='<root>\scratch\cdp-user-data' `
+>   --no-first-run '<root>\<folder-to-open>'
 > ```
 >
 > On VS Code **Insiders**, a pending auto-update can hold a mutex lock (`Error: mutex already exists`) and block the isolated launch. If that happens, fall back to **stable** VS Code.
@@ -263,7 +264,7 @@ Update the Key Screenshots table in the feature doc to reference the new paths:
 | `features/screenshots/<slug>/autocomplete-open.png` | Slash-command autocomplete open |
 ```
 
-> **Rule**: only copy screenshots that are genuinely useful for understanding the feature. 3–8 images per feature is typical. Raw run screenshots (dozens of incremental captures) stay in `$RUN_DIR/` and are gitignored.
+> **Rule**: only copy screenshots that are genuinely useful for understanding the feature. 3–8 images per feature is typical. Raw run screenshots (dozens of incremental captures) stay in `$RUN_DIR/` under `scratch/vscode-probe/runs/…`, which is gitignored.
 
 ### 5b — Final review pass
 
