@@ -26,6 +26,7 @@ When writing comments on GitHub issues or pull requests, follow these rules:
 
 ## Markdown Formatting
 - When passing markdown content to GitHub API tools (PR body, issue body, comments), use **actual newlines** — never use escaped `\n` literals in the string. Escaped newlines render as visible `\n` text instead of line breaks.
+- Format file paths with markdown syntax where possible, and split long path-heavy text into separate paragraphs so it remains readable.
 
 ## What NOT to do
 - Don't repeat the issue title or PR description back
