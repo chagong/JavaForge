@@ -139,6 +139,12 @@ Many features span multiple repos. Be aware of these common patterns:
 
 ---
 
+## GitHub Communication
+
+When creating or drafting GitHub comments, pull requests, issues, reviews, or discussions, make code references, issue references, and PR references clickable markdown links to the real target when the target is known.
+
+---
+
 ## Commit Messages
 
 Always use [Conventional Commits](https://www.conventionalcommits.org/) when making commits (e.g., `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`). Use the format `<type>(<optional scope>): <description>`.
