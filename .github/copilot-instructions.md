@@ -6,6 +6,12 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 
 ---
 
+## Pre-Work Repository Sync
+
+Before starting any new issue investigation, bug fix, feature implementation, or other source-level work, ensure the relevant local repository is in sync with its original upstream default branch. If it is not in sync, use the `/sync-repos` prompt to sync that repo before continuing.
+
+---
+
 ## Scratch Folder
 
 The `scratch/` directory is a gitignored workspace for temporary files — extracted JARs, patched binaries, build artifacts for local testing, etc. Always use `scratch/` instead of creating ad-hoc folders in the workspace root. Contents are excluded from version control; only `.gitkeep` is tracked.

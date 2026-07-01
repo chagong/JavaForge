@@ -1,7 +1,7 @@
 ---
 description: "Sync local repos with upstream remotes. Use when: syncing repos, pulling upstream changes, updating branches, fetching from origin."
 agent: "agent"
-tools: ["run_in_terminal"]
+tools: [vscode, execute, read, agent, browser, vscodeGeneral/rename, vscodeGeneral/usages, vscodeNotebooks/createJupyterNotebook, vscodeNotebooks/editNotebook, edit, search, web, 'github/*', todo]
 ---
 
 Sync the repositories in this workspace with their upstream remote branches.
