@@ -17,26 +17,26 @@ For each extension, update **all three** files:
 2. **`package-lock.json`** — run `npm install --package-lock-only` to sync
 3. **`CHANGELOG.md`** — add new version entry at the top
 
-Note: `vscode-gradle` has its `package.json` and `package-lock.json` under `extension/`, not the repo root.
+Note: `repos/vscode-gradle/` has its `package.json` and `package-lock.json` under `extension/`, not the repo root.
 
 ## Changelog Rules
 
 - Only include **user-facing changes**: features, bug fixes, performance improvements
 - **Exclude**: CI changes, dependency bumps (dependabot), test infrastructure, internal refactors
 - Include changes from **sub-module repos** in the parent extension's changelog:
-  - `vscode-gradle` includes changes from `microsoft/build-server-for-gradle`
-  - `vscode-java-debug` includes changes from `microsoft/java-debug`
+  - `repos/vscode-gradle/` includes changes from `microsoft/build-server-for-gradle`
+  - `repos/vscode-java-debug/` includes changes from `microsoft/java-debug`
 - Follow each repo's existing changelog format (see below)
 
 ## Changelog Formats by Repo
 
-| Repo | Format |
+| Repo Path | Format |
 |------|--------|
-| `vscode-gradle` | `## {version}` → `## What's Changed` → `* type - description in URL` |
-| `vscode-java-dependency` | `## {version}` → `- type - description in URL` |
-| `vscode-java-debug` | `## {version} - {YYYY-MM-DD}` → `### Added/Fixed/Changed` → `- description. [ref](URL).` |
-| `vscode-java-test` | `## {version}` → `## What's Changed` → `* type - description in URL` |
-| `vscode-maven` | `## {version}` → `### Added/Fixed/Changed` → `- description [#N](URL)` |
+| `repos/vscode-gradle/` | `## {version}` → `## What's Changed` → `* type - description in URL` |
+| `repos/vscode-java-dependency/` | `## {version}` → `- type - description in URL` |
+| `repos/vscode-java-debug/` | `## {version} - {YYYY-MM-DD}` → `### Added/Fixed/Changed` → `- description. [ref](URL).` |
+| `repos/vscode-java-test/` | `## {version}` → `## What's Changed` → `* type - description in URL` |
+| `repos/vscode-maven/` | `## {version}` → `### Added/Fixed/Changed` → `- description [#N](URL)` |
 
 ## PR Procedure
 
@@ -45,14 +45,14 @@ Note: `vscode-gradle` has its `package.json` and `package-lock.json` under `exte
 3. **Filter** to user-facing changes only
 4. **Determine version bump** (minor vs patch) based on whether features are present
 5. **Create a branch** named `bump-version-{new-version}` from the default branch
-   - Default branches: `develop` for vscode-gradle, `main` for all others
+    - Default branches: `develop` for `repos/vscode-gradle/`, `main` for all others
 6. **Update** `package.json`, run `npm install --package-lock-only`, update `CHANGELOG.md`
 7. **Commit** with message `bump version to {new-version}`
 8. **Push** and **create PR** with changelog summary in the PR body
 
 ## Sub-Module Repos
 
-| Parent Extension | Sub-Module Repo | What to Include |
+| Parent Extension Path | Sub-Module Repo | What to Include |
 |-----------------|----------------|-----------------|
-| `vscode-gradle` | `microsoft/build-server-for-gradle` | BSP server changes |
-| `vscode-java-debug` | `microsoft/java-debug` | Debug server changes |
+| `repos/vscode-gradle/` | `microsoft/build-server-for-gradle` | BSP server changes |
+| `repos/vscode-java-debug/` | `microsoft/java-debug` | Debug server changes |

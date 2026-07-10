@@ -1,6 +1,6 @@
 # Copilot Instructions — Java Extensions for VS Code
 
-This workspace is a development environment for coding agents (GitHub Copilot, Claude Code, etc.) to work on **Java tooling for VS Code**. It may contain any subset of the repositories listed below — agents should clone the repos they need for the task at hand.
+This workspace is a development environment for coding agents (GitHub Copilot, Claude Code, etc.) to work on **Java tooling for VS Code**. It may contain any subset of the repositories listed below — agents should clone the repos they need for the task at hand under `repos/`.
 
 For detailed architecture, internal APIs, module maps, and communication patterns, see [Java-Tooling-Architecture.md](../javatooling-architecture.md).
 
@@ -18,23 +18,29 @@ The `scratch/` directory is a gitignored workspace for temporary files — extra
 
 ---
 
+## Repository Folder
+
+The `repos/` directory is the workspace home for all cloned Java tooling repositories and upstream dependencies. Keep the folder itself in the workspace with `repos/.gitkeep`, but keep cloned repositories ignored by version control. Do not clone Java tooling repositories into the workspace root.
+
+---
+
 ## Repositories in This Workspace
 
 | Folder | Role | Repository |
 |--------|------|------------|
-| `vscode-java/` | Java Language Support — LSP client (TypeScript), central hub extension | https://github.com/redhat-developer/vscode-java |
-| `eclipse.jdt.ls/` | Eclipse JDT Language Server — LSP server powering all Java language features (Java) | https://github.com/eclipse-jdtls/eclipse.jdt.ls |
-| `eclipse.jdt.core/` | Eclipse JDT Core — compiler (ECJ), Java model, AST, search, formatter (Java) | https://github.com/eclipse-jdt/eclipse.jdt.core |
-| `vscode-java-debug/` | Debugger for Java — DAP client extension (TypeScript) | https://github.com/microsoft/vscode-java-debug |
-| `java-debug/` | Java Debug Server — DAP server over JDI (Java) | https://github.com/microsoft/java-debug |
-| `vscode-java-test/` | Test Runner for Java — VS Code Testing API integration (TypeScript + Java) | https://github.com/microsoft/vscode-java-test |
-| `vscode-gradle/` | Gradle for Java — project management, task runner, `.gradle` editing (TypeScript + Java) | https://github.com/microsoft/vscode-gradle |
-| `vscode-gradle/extension/build-server-for-gradle/` | Build Server for Gradle — BSP server, sub-project of vscode-gradle (Java) | https://github.com/microsoft/build-server-for-gradle |
-| `vscode-java-dependency/` | Project Manager for Java — project explorer, library management, JAR export (TypeScript + Java) | https://github.com/microsoft/vscode-java-dependency |
-| `vscode-maven/` | Maven for Java — project explorer, POM editing, lifecycle execution (TypeScript + Java) | https://github.com/microsoft/vscode-maven |
-| `vscode-java-pack/` | Extension Pack for Java — bundles all Java extensions, walkthrough, tips (TypeScript) | https://github.com/microsoft/vscode-java-pack |
-| `vscode-spring-initializr/` | Spring Initializr Java Support — Spring Boot project scaffolding, dependency management (TypeScript) | https://github.com/microsoft/vscode-spring-initializr |
-| `vscode-spring-boot-dashboard/` | Spring Boot Dashboard — app lifecycle management, beans/endpoints explorer (TypeScript + Java) | https://github.com/microsoft/vscode-spring-boot-dashboard |
+| `repos/vscode-java/` | Java Language Support — LSP client (TypeScript), central hub extension | https://github.com/redhat-developer/vscode-java |
+| `repos/eclipse.jdt.ls/` | Eclipse JDT Language Server — LSP server powering all Java language features (Java) | https://github.com/eclipse-jdtls/eclipse.jdt.ls |
+| `repos/eclipse.jdt.core/` | Eclipse JDT Core — compiler (ECJ), Java model, AST, search, formatter (Java) | https://github.com/eclipse-jdt/eclipse.jdt.core |
+| `repos/vscode-java-debug/` | Debugger for Java — DAP client extension (TypeScript) | https://github.com/microsoft/vscode-java-debug |
+| `repos/java-debug/` | Java Debug Server — DAP server over JDI (Java) | https://github.com/microsoft/java-debug |
+| `repos/vscode-java-test/` | Test Runner for Java — VS Code Testing API integration (TypeScript + Java) | https://github.com/microsoft/vscode-java-test |
+| `repos/vscode-gradle/` | Gradle for Java — project management, task runner, `.gradle` editing (TypeScript + Java) | https://github.com/microsoft/vscode-gradle |
+| `repos/vscode-gradle/extension/build-server-for-gradle/` | Build Server for Gradle — BSP server, sub-project of vscode-gradle (Java) | https://github.com/microsoft/build-server-for-gradle |
+| `repos/vscode-java-dependency/` | Project Manager for Java — project explorer, library management, JAR export (TypeScript + Java) | https://github.com/microsoft/vscode-java-dependency |
+| `repos/vscode-maven/` | Maven for Java — project explorer, POM editing, lifecycle execution (TypeScript + Java) | https://github.com/microsoft/vscode-maven |
+| `repos/vscode-java-pack/` | Extension Pack for Java — bundles all Java extensions, walkthrough, tips (TypeScript) | https://github.com/microsoft/vscode-java-pack |
+| `repos/vscode-spring-initializr/` | Spring Initializr Java Support — Spring Boot project scaffolding, dependency management (TypeScript) | https://github.com/microsoft/vscode-spring-initializr |
+| `repos/vscode-spring-boot-dashboard/` | Spring Boot Dashboard — app lifecycle management, beans/endpoints explorer (TypeScript + Java) | https://github.com/microsoft/vscode-spring-boot-dashboard |
 
 ---
 
@@ -42,15 +48,15 @@ The `scratch/` directory is a gitignored workspace for temporary files — extra
 
 | Extension ID | Extension Name | VS Code Extension Repo | Backend/Server Repo |
 |-------------|---------------|----------------------|---------------------|
-| `redhat.java` | Language Support for Java | `vscode-java/` | `eclipse.jdt.ls/` + `eclipse.jdt.core/` |
-| `vscjava.vscode-java-debug` | Debugger for Java | `vscode-java-debug/` | `java-debug/` |
-| `vscjava.vscode-java-test` | Test Runner for Java | `vscode-java-test/` | (Java plugin in same repo) |
-| `vscjava.vscode-gradle` | Gradle for Java | `vscode-gradle/` | (Java servers in same repo) |
-| `vscjava.vscode-java-dependency` | Project Manager for Java | `vscode-java-dependency/` | (Java plugin in same repo) |
-| `vscjava.vscode-maven` | Maven for Java | `vscode-maven/` | (Java plugin in same repo) |
-| `vscjava.vscode-java-pack` | Extension Pack for Java | `vscode-java-pack/` | — (pack only, no backend) |
-| `vscjava.vscode-spring-initializr` | Spring Initializr Java Support | `vscode-spring-initializr/` | — |
-| `vscjava.vscode-spring-boot-dashboard` | Spring Boot Dashboard | `vscode-spring-boot-dashboard/` | (Java plugin in same repo) |
+| `redhat.java` | Language Support for Java | `repos/vscode-java/` | `repos/eclipse.jdt.ls/` + `repos/eclipse.jdt.core/` |
+| `vscjava.vscode-java-debug` | Debugger for Java | `repos/vscode-java-debug/` | `repos/java-debug/` |
+| `vscjava.vscode-java-test` | Test Runner for Java | `repos/vscode-java-test/` | (Java plugin in same repo) |
+| `vscjava.vscode-gradle` | Gradle for Java | `repos/vscode-gradle/` | (Java servers in same repo) |
+| `vscjava.vscode-java-dependency` | Project Manager for Java | `repos/vscode-java-dependency/` | (Java plugin in same repo) |
+| `vscjava.vscode-maven` | Maven for Java | `repos/vscode-maven/` | (Java plugin in same repo) |
+| `vscjava.vscode-java-pack` | Extension Pack for Java | `repos/vscode-java-pack/` | — (pack only, no backend) |
+| `vscjava.vscode-spring-initializr` | Spring Initializr Java Support | `repos/vscode-spring-initializr/` | — |
+| `vscjava.vscode-spring-boot-dashboard` | Spring Boot Dashboard | `repos/vscode-spring-boot-dashboard/` | (Java plugin in same repo) |
 
 ### Extension Dependency Chain
 
@@ -72,60 +78,60 @@ When working on bug fixes or feature requests for any repo in this workspace, al
 
 Every repo has unit tests that must pass locally before submitting a PR.
 
-| Repo | Test Command | Build System | Notes |
+| Repo Path | Test Command | Build System | Notes |
 |------|-------------|-------------|-------|
-| `vscode-java` | `npm test` | Mocha | Requires X11 on Linux (`xvfb-run`) |
-| `eclipse.jdt.ls` | `./mvnw clean verify` | JUnit (OSGi plugin tests) | Requires JDK 21+ |
-| `eclipse.jdt.core` | `./mvnw clean verify` | JUnit (OSGi plugin tests) | Multi-compliance: Java 8, 11, 17, 21, 25, 26 |
-| `vscode-java-debug` | `npm test` | Mocha | — |
-| `java-debug` | `./mvnw clean verify` | JUnit 4 + EasyMock | Requires JDK 21+ |
-| `vscode-java-test` | `npm run build-plugin && npm test` | Mocha + Maven | Build Java plugin first |
-| `vscode-gradle` | `./gradlew build testVsCode` | Mocha + JUnit + Gradle | Build JARs first: `cd extension && ../gradlew buildJars` |
-| `vscode-java-dependency` | `npm run build-server && npm test` | Mocha + Maven | Build Java plugin first |
-| `vscode-maven` | `npm run build-plugin && npm test` | Mocha + Maven | Build Java plugin first |
-| `vscode-spring-initializr` | `npm test` | Mocha | — |
-| `vscode-spring-boot-dashboard` | `npm test` | Mocha | Build Java plugin first: `npm run prepublish` |
+| `repos/vscode-java/` | `npm test` | Mocha | Requires X11 on Linux (`xvfb-run`) |
+| `repos/eclipse.jdt.ls/` | `./mvnw clean verify` | JUnit (OSGi plugin tests) | Requires JDK 21+ |
+| `repos/eclipse.jdt.core/` | `./mvnw clean verify` | JUnit (OSGi plugin tests) | Multi-compliance: Java 8, 11, 17, 21, 25, 26 |
+| `repos/vscode-java-debug/` | `npm test` | Mocha | — |
+| `repos/java-debug/` | `./mvnw clean verify` | JUnit 4 + EasyMock | Requires JDK 21+ |
+| `repos/vscode-java-test/` | `npm run build-plugin && npm test` | Mocha + Maven | Build Java plugin first |
+| `repos/vscode-gradle/` | `./gradlew build testVsCode` | Mocha + JUnit + Gradle | Build JARs first: `cd extension && ../gradlew buildJars` |
+| `repos/vscode-java-dependency/` | `npm run build-server && npm test` | Mocha + Maven | Build Java plugin first |
+| `repos/vscode-maven/` | `npm run build-plugin && npm test` | Mocha + Maven | Build Java plugin first |
+| `repos/vscode-spring-initializr/` | `npm test` | Mocha | — |
+| `repos/vscode-spring-boot-dashboard/` | `npm test` | Mocha | Build Java plugin first: `npm run prepublish` |
 
 ### 2. UI Tests Must Pass (Where Applicable)
 
 Some repos have dedicated UI test workflows that validate end-to-end behavior:
 
-| Repo | UI Test Workflow | Platforms |
+| Repo Path | UI Test Workflow | Platforms |
 |------|-----------------|-----------|
-| `vscode-java-dependency` | `windowsUI.yml`, `linuxUI.yml` | Windows, Linux |
+| `repos/vscode-java-dependency/` | `windowsUI.yml`, `linuxUI.yml` | Windows, Linux |
 
 ### 3. PR CI Checks Must Pass
 
 Every repo runs CI on pull requests. A PR cannot be merged until all CI checks are green. Always check the CI status on GitHub after pushing commits, and investigate any failures before requesting reviews.
 
-| Repo | CI Workflows | Platforms |
+| Repo Path | CI Workflows | Platforms |
 |------|-------------|-----------|
-| `vscode-java` | `pr-verify.yml` — build, lint (`eslint`), test, package | macOS, Linux |
-| `eclipse.jdt.core` | `ci.yml` — full verify; `pr-checks.yml`; `codeql.yml` | Linux, Windows, macOS |
-| `eclipse.jdt.ls` | `licensecheck.yml` — license vetting; `codeql-analysis.yml` | Linux |
-| `vscode-java-debug` | `build.yml` — lint (`tslint`), build, test, package | Linux |
-| `java-debug` | `build.yml` — verify + checkstyle | Linux, Windows |
-| `vscode-java-test` | `build.yml` — build-plugin, lint, compile, test, package | Linux |
-| `vscode-gradle` | `main.yml` — build, lint, test, SonarQube analysis | Ubuntu |
-| `vscode-java-dependency` | `linux.yml`, `windows.yml`, `macOS.yml`, `linuxUI.yml`, `windowsUI.yml` | Linux, Windows, macOS |
-| `vscode-maven` | `linux.yml`, `windows.yml`, `macOS.yml` | Linux, Windows, macOS |
-| `vscode-spring-initializr` | Azure Pipelines | — |
-| `vscode-spring-boot-dashboard` | Azure Pipelines | — |
+| `repos/vscode-java/` | `pr-verify.yml` — build, lint (`eslint`), test, package | macOS, Linux |
+| `repos/eclipse.jdt.core/` | `ci.yml` — full verify; `pr-checks.yml`; `codeql.yml` | Linux, Windows, macOS |
+| `repos/eclipse.jdt.ls/` | `licensecheck.yml` — license vetting; `codeql-analysis.yml` | Linux |
+| `repos/vscode-java-debug/` | `build.yml` — lint (`tslint`), build, test, package | Linux |
+| `repos/java-debug/` | `build.yml` — verify + checkstyle | Linux, Windows |
+| `repos/vscode-java-test/` | `build.yml` — build-plugin, lint, compile, test, package | Linux |
+| `repos/vscode-gradle/` | `main.yml` — build, lint, test, SonarQube analysis | Ubuntu |
+| `repos/vscode-java-dependency/` | `linux.yml`, `windows.yml`, `macOS.yml`, `linuxUI.yml`, `windowsUI.yml` | Linux, Windows, macOS |
+| `repos/vscode-maven/` | `linux.yml`, `windows.yml`, `macOS.yml` | Linux, Windows, macOS |
+| `repos/vscode-spring-initializr/` | Azure Pipelines | — |
+| `repos/vscode-spring-boot-dashboard/` | Azure Pipelines | — |
 
 ### 4. Code Style & Linting
 
-| Repo | Lint Command | Tool |
+| Repo Path | Lint Command | Tool |
 |------|-------------|------|
-| `vscode-java` | `npm run eslint` | ESLint |
-| `vscode-java-debug` | `npm run tslint` | TSLint |
-| `vscode-java-test` | `npm run lint` | ESLint/TSLint |
-| `vscode-gradle` | `./gradlew lint` (Prettier) | Prettier |
-| `vscode-java-dependency` | `npm run tslint` | TSLint |
-| `vscode-maven` | `npm run tslint` | TSLint |
-| `vscode-spring-initializr` | `npm run tslint` | TSLint |
-| `vscode-spring-boot-dashboard` | `npm run tslint` | ESLint |
-| `eclipse.jdt.core` | `./mvnw checkstyle:check` | Checkstyle |
-| `java-debug` | `./mvnw checkstyle:check` | Checkstyle |
+| `repos/vscode-java/` | `npm run eslint` | ESLint |
+| `repos/vscode-java-debug/` | `npm run tslint` | TSLint |
+| `repos/vscode-java-test/` | `npm run lint` | ESLint/TSLint |
+| `repos/vscode-gradle/` | `./gradlew lint` (Prettier) | Prettier |
+| `repos/vscode-java-dependency/` | `npm run tslint` | TSLint |
+| `repos/vscode-maven/` | `npm run tslint` | TSLint |
+| `repos/vscode-spring-initializr/` | `npm run tslint` | TSLint |
+| `repos/vscode-spring-boot-dashboard/` | `npm run tslint` | ESLint |
+| `repos/eclipse.jdt.core/` | `./mvnw checkstyle:check` | Checkstyle |
+| `repos/java-debug/` | `./mvnw checkstyle:check` | Checkstyle |
 
 ### 5. Additional Requirements for Eclipse Projects
 
@@ -137,10 +143,10 @@ Every repo runs CI on pull requests. A PR cannot be merged until all CI checks a
 **Always use the canonical repo list** from the "Repositories in This Workspace" table above when performing cross-repo tasks (e.g., auditing Dependabot alerts, checking CI status, searching for patterns). Do **not** rely on which directories happen to exist locally — the workspace may contain only a subset of the repos. For repos not cloned locally, use GitHub API tools (MCP, `gh`, or skill scripts) to query them, and clone only when changes are needed.
 
 Many features span multiple repos. Be aware of these common patterns:
-- **Language features** (completion, diagnostics, refactoring): Changes typically go in `eclipse.jdt.core` or `eclipse.jdt.ls`, exposed to VS Code via `vscode-java`.
-- **Debug features**: Client-side in `vscode-java-debug`, server-side in `java-debug`.
-- **Test features**: Client-side in `vscode-java-test`, JDTLS plugin in the same repo.
-- **Build tool features**: Maven in `vscode-maven`, Gradle in `vscode-gradle`, both integrate with `eclipse.jdt.ls` via JDTLS plugins.
+- **Language features** (completion, diagnostics, refactoring): Changes typically go in `repos/eclipse.jdt.core/` or `repos/eclipse.jdt.ls/`, exposed to VS Code via `repos/vscode-java/`.
+- **Debug features**: Client-side in `repos/vscode-java-debug/`, server-side in `repos/java-debug/`.
+- **Test features**: Client-side in `repos/vscode-java-test/`, JDTLS plugin in the same repo.
+- **Build tool features**: Maven in `repos/vscode-maven/`, Gradle in `repos/vscode-gradle/`, both integrate with `repos/eclipse.jdt.ls/` via JDTLS plugins.
 - **JDTLS plugins**: Extensions contribute JARs via `contributes.javaExtensions` in `package.json`, loaded by `redhat.java` at startup. Changes to plugin APIs may require coordinated PRs across repos.
 
 ---

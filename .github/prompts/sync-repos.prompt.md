@@ -6,7 +6,7 @@ tools: [vscode, execute, read, agent, browser, vscodeGeneral/rename, vscodeGener
 
 Sync the repositories in this workspace with their upstream remote branches.
 
-The repos to sync are all top-level directories under the workspace root, plus the nested repo at `vscode-gradle/extension/build-server-for-gradle/`.
+The repos to sync are all direct child directories under `repos/`, plus the nested repo at `repos/vscode-gradle/extension/build-server-for-gradle/` when present.
 
 For each repo directory, do the following:
 

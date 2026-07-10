@@ -53,7 +53,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}
     steps:
-      - name: Checkout (for the prompt file)
+      - name: Checkout (for the Dependabot agent and skills)
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -69,9 +69,7 @@ jobs:
 
       - name: Manage Dependabot PRs
         run: |
-          PROMPT_FILE=".github/prompts/dependabot-auto-merge.prompt.md"
-          PROMPT="$(cat "$PROMPT_FILE")"
-          PROMPT="$PROMPT
+          PROMPT="Manage open Dependabot pull requests across the Microsoft-managed Java tooling repositories.
 
           The 'workflowRunUrl' for the Teams notification is ${WORKFLOW_RUN_URL}."
           if [ "$DRY_RUN" = "true" ]; then
@@ -83,8 +81,8 @@ jobs:
           copilot \
             --allow-all \
             --enable-all-github-mcp-tools \
-            --no-custom-instructions \
             --no-ask-user \
+            --agent "Dependabot PR Manager" \
             --log-level debug \
             --log-dir ./copilot-logs \
             --share ./copilot-session.md \

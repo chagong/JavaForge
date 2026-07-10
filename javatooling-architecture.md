@@ -104,7 +104,7 @@ eclipse.jdt.core  ←── Foundation library, no VS Code dependency
 
 ## Detailed Project Descriptions
 
-### 1. `vscode-java/` — Language Support for Java by Red Hat
+### 1. `repos/vscode-java/` — Language Support for Java by Red Hat
 
 - **Extension ID**: `redhat.java`
 - **Version**: 1.54.0
@@ -113,7 +113,7 @@ eclipse.jdt.core  ←── Foundation library, no VS Code dependency
 - **Server modes**: Standard (full features), LightWeight (syntax only), Hybrid (auto-switch).
 - **Build**: `npm install && npm run compile` (client), `npm run build-server` (server from source) or `npm run download-server` (pre-built binary).
 - **Entry point**: `src/extension.ts` → bundled as `dist/extension.js`.
-- **Key env var**: `JDT_LS_PATH` — point to local eclipse.jdt.ls build.
+- **Key env var**: `JDT_LS_PATH` — point to the local `repos/eclipse.jdt.ls/` build.
 
 #### Exported API (ExtensionAPI v0.13)
 
@@ -142,7 +142,7 @@ Extensions declare JARs in their `package.json` under `contributes.javaExtension
 
 ---
 
-### 2. `eclipse.jdt.ls/` — Eclipse JDT Language Server
+### 2. `repos/eclipse.jdt.ls/` — Eclipse JDT Language Server
 
 - **Version**: 1.58.0-SNAPSHOT
 - **License**: EPL 2.0
@@ -173,7 +173,7 @@ Extensions declare JARs in their `package.json` under `contributes.javaExtension
 
 ---
 
-### 3. `eclipse.jdt.core/` — Eclipse JDT Core (Foundation Library)
+### 3. `repos/eclipse.jdt.core/` — Eclipse JDT Core (Foundation Library)
 
 - **Version**: 3.45.100 (parent POM: 4.40.0-SNAPSHOT)
 - **License**: EPL 2.0
@@ -218,7 +218,7 @@ Extensions declare JARs in their `package.json` under `contributes.javaExtension
 The main module (~948 Java files) is organized into subsystems:
 
 ```
-org.eclipse.jdt.core/
+repos/eclipse.jdt.core/org.eclipse.jdt.core/
 ├── model/     (~515 files)  Java element model (workspace ↔ project ↔ packages ↔ types)
 ├── dom/       (~227 files)  AST/DOM nodes, bindings, rewriting
 ├── search/    (~152 files)  Search engine, indexing, pattern matching
@@ -320,7 +320,7 @@ Tests run across multiple Java compliance levels (`-Dcompliance=1.8|11|17|21|23|
 
 ---
 
-### 4. `vscode-java-debug/` — Debugger for Java (VS Code Extension)
+### 4. `repos/vscode-java-debug/` — Debugger for Java (VS Code Extension)
 
 - **Extension ID**: `vscjava.vscode-java-debug`
 - **Version**: 0.58.5
@@ -346,7 +346,7 @@ Tests run across multiple Java compliance levels (`-Dcompliance=1.8|11|17|21|23|
 
 ---
 
-### 5. `java-debug/` — Java Debug Server
+### 5. `repos/java-debug/` — Java Debug Server
 
 - **Version**: 0.53.2
 - **License**: EPL 1.0
@@ -369,7 +369,7 @@ VS Code Debug UI → vscode-java-debug (TS) → DAP over TCP socket → java-deb
 
 ---
 
-### 6. `vscode-java-test/` — Test Runner for Java
+### 6. `repos/vscode-java-test/` — Test Runner for Java
 
 - **Extension ID**: `vscjava.vscode-java-test`
 - **Version**: 0.44.0
@@ -398,7 +398,7 @@ The plugin registers delegate commands: `vscode.java.test.get.testpath`, `vscode
 
 ---
 
-### 7. `vscode-gradle/` — Gradle for Java
+### 7. `repos/vscode-gradle/` — Gradle for Java
 
 - **Extension ID**: `vscjava.vscode-gradle`
 - **Version**: 3.17.2
@@ -436,7 +436,7 @@ The plugin registers delegate commands: `vscode.java.test.get.testpath`, `vscode
 
 ---
 
-### 8. `vscode-gradle/extension/build-server-for-gradle/` — Build Server for Gradle
+### 8. `repos/vscode-gradle/extension/build-server-for-gradle/` — Build Server for Gradle
 
 - **Purpose**: Implements the Build Server Protocol (BSP) for Gradle. Used by the vscode-gradle JDTLS importer to provide project structure to eclipse.jdt.ls.
 - **Requires**: JDK 17+
@@ -457,7 +457,7 @@ The plugin registers delegate commands: `vscode.java.test.get.testpath`, `vscode
 
 ---
 
-### 9. `vscode-java-dependency/` — Project Manager for Java
+### 9. `repos/vscode-java-dependency/` — Project Manager for Java
 
 - **Extension ID**: `vscjava.vscode-java-dependency`
 - **Version**: 0.27.1
@@ -488,7 +488,7 @@ The plugin registers delegate commands: `vscode.java.test.get.testpath`, `vscode
 
 ---
 
-### 10. `vscode-maven/` — Maven for Java
+### 10. `repos/vscode-maven/` — Maven for Java
 
 - **Extension ID**: `vscjava.vscode-maven`
 - **Version**: 0.45.1
