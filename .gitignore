@@ -6,4 +6,5 @@ logs/*
 scratch/*
 !scratch/.gitkeep
 **/.vscode-test/
+.playwright-cli/
 .env
