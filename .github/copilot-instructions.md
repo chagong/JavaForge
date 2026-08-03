@@ -22,6 +22,8 @@ The `scratch/` directory is a gitignored workspace for temporary files — extra
 
 The `repos/` directory is the workspace home for all cloned Java tooling repositories and upstream dependencies. Keep the folder itself in the workspace with `repos/.gitkeep`, but keep cloned repositories ignored by version control. Do not clone Java tooling repositories into the workspace root.
 
+Before using GitHub APIs for source lookup, inspect the relevant canonical path under `repos/<repo>/` directly. If a recursive search reports no match, list `repos/` and check the mapped repository path before concluding that the repository is not cloned.
+
 ---
 
 ## Repositories in This Workspace
