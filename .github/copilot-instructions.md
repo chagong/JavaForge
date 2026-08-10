@@ -159,6 +159,12 @@ When creating or drafting GitHub comments, pull requests, issues, reviews, or di
 
 ---
 
+## Changelog Policy
+
+Do not add or update a changelog in a feature or bug-fix contribution unless the user explicitly requests it or the repository's contributor documentation explicitly requires it. Recent maintainer commits that update the changelog do not establish a contributor requirement; leave release-note curation to maintainers by default. Version-bump and release-preparation tasks governed by `.github/instructions/version-bump.instructions.md` are exempt.
+
+---
+
 ## Commit Messages
 
 Always use [Conventional Commits](https://www.conventionalcommits.org/) when making commits (e.g., `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`). Use the format `<type>(<optional scope>): <description>`.
