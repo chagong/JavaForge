@@ -46,7 +46,6 @@ jobs:
       # COPILOT_CLI_TOKEN provides the Copilot CLI entitlement.
       GH_TOKEN: ${{ secrets.GH_PAT }}
       GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
       # Teams notification (send-teams-notification skill).
       PERSONAL_NOTIFICATION_URL: ${{ secrets.PERSONAL_NOTIFICATION_URL }}
       RECIPIENTS: ${{ secrets.RECIPIENTS }}
