@@ -173,9 +173,14 @@ Print a concise summary with:
 
 ## Teams Notification
 
-After printing the report, use the `send-teams-notification` skill at
+Do NOT send a Teams notification by default. Send one only when the user prompt
+explicitly requests a Teams notification for this run. A configured
+`PERSONAL_NOTIFICATION_URL`, `RECIPIENTS`, or `workflowRunUrl` does not count as
+an explicit request.
+
+When explicitly requested, use the `send-teams-notification` skill at
 `.github/skills/send-teams-notification/SKILL.md` to deliver the same summary to
-Teams.
+Teams:
 
 - Send ONE notification per recipient for this target PR: split `RECIPIENTS` on
   commas or semicolons, trim whitespace, and POST the payload once per email
