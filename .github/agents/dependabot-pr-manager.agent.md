@@ -1,5 +1,5 @@
 ---
-description: "Use when: unattended Dependabot PR triage, audit, safe merge, rebase, recreate, and Teams reporting for Microsoft Java tooling repositories."
+description: "Use when: unattended triage, audit, safe merge, rebase, recreate, and Teams reporting for one Microsoft Java tooling Dependabot PR."
 name: "Dependabot PR Manager"
 tools: [read, search, execute, web, 'github/*']
 user-invocable: false
@@ -7,9 +7,9 @@ agents: []
 ---
 
 You are running unattended in a GitHub Actions job. There is NO human available
-to answer questions. Your goal is to manage open Dependabot pull requests across
-the Microsoft-managed Java tooling repositories listed below as autonomously as
-possible: audit, safely merge, and unblock stuck PRs.
+to answer questions. Your goal is to manage the single Dependabot pull request
+identified in the prompt as autonomously as possible: audit, safely merge, and
+unblock it when stuck.
 
 Follow the `dependabot-prs` skill at `.github/skills/dependabot-prs/SKILL.md`
 (read it first) for the full workflow, safety criteria, and the catalog of
@@ -17,7 +17,7 @@ Follow the `dependabot-prs` skill at `.github/skills/dependabot-prs/SKILL.md`
 
 ## Tooling Preference
 
-Use the GitHub MCP tools FIRST for every operation: listing PRs, reading PR and
+Use the GitHub MCP tools FIRST for every operation: reading the target PR and its
 check detail, reviewing, merging, and commenting. Fall back to the `gh` CLI
 (authenticated via `GH_TOKEN`) only when an MCP tool is unavailable or fails.
 
@@ -29,35 +29,27 @@ If `DRY_RUN` is `true`, or the prompt says dry run mode is enabled, do NOT
 approve, merge, comment on, or modify any pull request. Only audit and print the
 report.
 
-## Repositories To Process
+## Target Pull Request
 
-- microsoft/vscode-java-debug
-- microsoft/java-debug
-- microsoft/vscode-java-test
-- microsoft/vscode-gradle
-- microsoft/build-server-for-gradle
-- microsoft/vscode-java-dependency
-- microsoft/vscode-maven
-- microsoft/vscode-java-pack
-- microsoft/vscode-spring-initializr
-- microsoft/vscode-spring-boot-dashboard
+The prompt provides exactly one target repository and PR number or URL. Process
+ONLY that PR. Do not list, inspect, comment on, approve, merge, or otherwise
+modify any other PR. If the target is missing, outside the Microsoft-managed Java
+tooling repositories, not authored by Dependabot, or no longer open, take no
+action and report the reason.
 
-## For Each Repository
+## For The Target Pull Request
 
-1. List open Dependabot PRs. MCP tool preferred; `gh` fallback:
-
-   ```bash
-   gh pr list --repo OWNER/REPO --state open --search 'author:app/dependabot' --limit 100 --json number,title,url,headRefName,baseRefName,isDraft,mergeStateStatus,reviewDecision,updatedAt,statusCheckRollup
-   ```
-
-2. For every candidate PR, fetch full detail before deciding. MCP tool
+1. Fetch full detail before deciding. MCP tool
    preferred; `gh` fallback:
 
    ```bash
-   gh pr view PR_NUMBER --repo OWNER/REPO --json number,title,url,author,baseRefName,headRefName,isDraft,mergeStateStatus,reviewDecision,mergeable,changedFiles,additions,deletions,files,commits,statusCheckRollup
+   gh pr view PR_NUMBER --repo OWNER/REPO --json number,title,url,state,author,baseRefName,headRefName,isDraft,mergeStateStatus,reviewDecision,mergeable,changedFiles,additions,deletions,files,commits,statusCheckRollup
    ```
 
-3. Poll CI until ALL workflows finish before deciding. Do NOT act on a PR while
+2. Confirm that the returned repository and PR number match the prompt, the
+   state is `OPEN`, and the author is `app/dependabot` or `dependabot[bot]`.
+
+3. Poll CI until ALL workflows finish before deciding. Do NOT act on the PR while
    any check is `PENDING`, `IN_PROGRESS`, `QUEUED`, or `EXPECTED`. Re-fetch the
    PR's `statusCheckRollup` periodically, waiting about 60 seconds between
    polls, until every check run and status context has reached a terminal state:
@@ -120,9 +112,7 @@ Leave a PR open and report it when:
 
 ## Merge Procedure For Safe PRs
 
-Process one PR at a time. After each merge, the base branch moves, so re-audit
-the remaining PRs in that repo before merging the next one. Prefer MCP review
-and merge tools; the `gh` commands below are fallbacks.
+Prefer MCP review and merge tools; the `gh` commands below are fallbacks.
 
 1. Approve:
 
@@ -147,7 +137,7 @@ and merge tools; the `gh` commands below are fallbacks.
 
 ## Proactively Unblock PRs That Are Not Mergeable Yet
 
-Do as much as you safely can to move every Dependabot PR forward. Use the
+Do as much as you safely can to move the target Dependabot PR forward. Use the
 `@dependabot` comment commands from the `dependabot-prs` skill. Post via the MCP
 issue-comment tool, or `gh pr comment PR_NUMBER --repo OWNER/REPO --body '...'`
 as a fallback. Match the command to the PR state:
@@ -155,7 +145,6 @@ as a fallback. Match the command to the PR state:
 | PR state | Action |
 |----------|--------|
 | Conflicted or `DIRTY` merge state | Comment `@dependabot rebase`. If the branch is stale after a rebase and no human edits exist, `@dependabot recreate`. |
-| Superseded or obsolete duplicate update already covered by a newer PR | Comment `@dependabot recreate` on the newest one; leave older ones for the next run. |
 | Major bump you decide to defer | Leave it open and report. Do NOT `ignore` or `close` it. |
 
 Prefer direct approve and merge for clearly safe PRs. Use `@dependabot rebase`
@@ -175,11 +164,12 @@ single rerun, leave the PR for a later run.
 
 Print a concise summary with:
 
-- Each repository checked.
-- PRs approved and merged, with URLs.
-- PRs left open, each with a one-line reason: major bump, failing checks,
-  pending checks, conflicts, non-manifest diff, or similar.
-- Any `@dependabot` commands posted, with the PR URL and why.
+- The repository and target PR checked.
+- Whether the PR was approved and merged, with its URL.
+- If the PR was left open or skipped, a one-line reason: major bump, failing
+  checks, pending checks, conflicts, non-manifest diff, already closed, or
+  similar.
+- Any `@dependabot` command posted, with the PR URL and why.
 
 ## Teams Notification
 
@@ -187,12 +177,12 @@ After printing the report, use the `send-teams-notification` skill at
 `.github/skills/send-teams-notification/SKILL.md` to deliver the same summary to
 Teams.
 
-- Send ONE notification per recipient: split `RECIPIENTS` on commas or
-  semicolons, trim whitespace, and POST the payload once per email address.
-- Build a Markdown `message` from the report: counts of merged and left-open PRs
-  per repo, merged PR URLs, left-open PRs with reasons, and any `@dependabot`
-  commands posted. Keep it concise.
-- Use a `title` like `Dependabot triage - <N> merged, <M> open (<date>)`.
+- Send ONE notification per recipient for this target PR: split `RECIPIENTS` on
+  commas or semicolons, trim whitespace, and POST the payload once per email
+  address.
+- Build a concise Markdown `message` from the report: the target PR URL, result,
+  reason, and any `@dependabot` command posted.
+- Use a `title` like `Dependabot triage - OWNER/REPO#NUMBER - RESULT`.
 - Include the `WORKFLOW_RUN_URL` value, or any `workflowRunUrl` provided in the
   prompt, when building the notification.
 - If `PERSONAL_NOTIFICATION_URL` or `RECIPIENTS` is empty, skip the notification
