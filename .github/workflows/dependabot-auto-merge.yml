@@ -144,7 +144,9 @@ jobs:
 
           Do not list, inspect, comment on, approve, merge, or otherwise modify any other pull request.
 
-          The 'workflowRunUrl' is ${WORKFLOW_RUN_URL}."
+          The 'workflowRunUrl' is ${WORKFLOW_RUN_URL}.
+
+          If and only if the final decision is NOT_MERGED, send the required Teams notification to the configured recipients with the explicit reason and next action."
           if [ "$DRY_RUN" = "true" ]; then
             PROMPT="$PROMPT
 

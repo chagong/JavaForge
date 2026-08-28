@@ -49,24 +49,32 @@ action and report the reason.
 2. Confirm that the returned repository and PR number match the prompt, the
    state is `OPEN`, and the author is `app/dependabot` or `dependabot[bot]`.
 
-3. Poll CI until ALL workflows finish before deciding. Do NOT act on the PR while
-   any check is `PENDING`, `IN_PROGRESS`, `QUEUED`, or `EXPECTED`. Re-fetch the
-   PR's `statusCheckRollup` periodically, waiting about 60 seconds between
-   polls, until every check run and status context has reached a terminal state:
-   `SUCCESS`, `NEUTRAL`, `SKIPPED`, `FAILURE`, `CANCELLED`, `TIMED_OUT`,
-   `ACTION_REQUIRED`, or `STALE`. Only once the whole rollup is terminal may you
-   evaluate the safety rules and take an action. `gh` fallback for a single poll:
+3. Start a 50-minute decision budget when the first PR detail is fetched. This
+   leaves time inside the 60-minute workflow job for the final report and
+   optional Teams notification. Keep working through the state transitions below
+   until the PR is merged, a definitive safety rule fails, or the decision budget
+   expires. On every refreshed state, use this order: stop on a definitive safety
+   blocker; recover a `DIRTY`, `BEHIND`, conflicted, or stale branch; poll CI and
+   perform the one permitted failed-job rerun; then approve and merge if safe.
+
+4. Poll CI until ALL workflows finish before deciding. Do NOT approve or merge
+   while any check is `PENDING`, `IN_PROGRESS`, `QUEUED`, or `EXPECTED`.
+   Re-fetch the PR's `statusCheckRollup` every 60 seconds until every check run
+   and status context has reached a terminal state: `SUCCESS`, `NEUTRAL`,
+   `SKIPPED`, `FAILURE`, `CANCELLED`, `TIMED_OUT`, `ACTION_REQUIRED`, or
+   `STALE`. `gh` fallback for a single poll:
 
    ```bash
    gh pr view PR_NUMBER --repo OWNER/REPO --json statusCheckRollup,mergeStateStatus,mergeable
    ```
 
-   If checks are still running after a reasonable number of polls, leave the PR
-   open, note it as "CI still in progress", and let the next scheduled run pick
-   it up. After approving or after a `@dependabot rebase` or `@dependabot
-   recreate`, poll again until all workflows complete before merging.
+   Continue polling while the decision budget remains. After approval, rebase,
+   recreate, or a failed-job rerun, restart polling against the current head SHA;
+   do not reuse check results from an earlier head. If the budget expires with
+   checks still running, make a final NOT_MERGED decision and name every
+   non-terminal check in the reason.
 
-4. CI workflows sometimes fail intermittently. When polling finishes and one or
+5. CI workflows sometimes fail intermittently. When polling finishes and one or
    more checks ended in `FAILURE`, `CANCELLED`, or `TIMED_OUT`, re-run the failed
    jobs ONCE before treating the failure as real. Identify the run from the
    failed check and re-run only its failed jobs:
@@ -75,9 +83,10 @@ action and report the reason.
    gh run rerun RUN_ID --repo OWNER/REPO --failed
    ```
 
-   Then poll again until the rerun reaches a terminal state. If it is still red
-   after this single rerun, treat the failure as real: do NOT merge, leave the
-   PR open, and report it. Re-run failed jobs at most once per PR per run.
+   Then poll the rerun to a terminal state while the decision budget remains. If
+   it is still red after this single rerun, make a final NOT_MERGED decision and
+   name the consistently failing checks. Re-run failed jobs at most once per PR
+   per agent run.
 
 ## Safety Rules
 
@@ -168,36 +177,59 @@ Prefer MCP review and merge tools; the `gh` commands below are fallbacks.
    ```
 
 2. Refresh state. Branch protection may recalculate, and `mergeStateStatus` may
-   briefly be `UNKNOWN`; re-check until it settles:
+   briefly be `UNKNOWN`; poll every 60 seconds until it settles or the decision
+   budget expires:
 
    ```bash
    gh pr view PR_NUMBER --repo OWNER/REPO --json mergeStateStatus,mergeable,reviewDecision,statusCheckRollup
    ```
 
 3. Merge ONLY if the refreshed state is `CLEAN`, `MERGEABLE`, and `APPROVED`,
-   with all checks green. If approval, rebase, or recreate re-triggered CI, poll
-   again until every workflow is terminal before merging:
+   with all checks green for the current head SHA. If approval re-triggered CI,
+   poll again until every workflow is terminal before merging:
 
    ```bash
    gh pr merge PR_NUMBER --repo OWNER/REPO --squash --delete-branch
    ```
 
+4. If the merge API reports a transient or stale-state failure, refresh the PR
+   and retry the merge once when it is still open, clean, approved, mergeable,
+   and green. Otherwise make a final NOT_MERGED decision with the exact merge
+   error.
+
 ## Proactively Unblock PRs That Are Not Mergeable Yet
 
-Do as much as you safely can to move the target Dependabot PR forward. Use the
-`@dependabot` comment commands from the `dependabot-prs` skill. Post via the MCP
-issue-comment tool, or `gh pr comment PR_NUMBER --repo OWNER/REPO --body '...'`
-as a fallback. Match the command to the PR state:
+Do as much as safely possible to move the target Dependabot PR to a final
+decision. Use the `@dependabot` commands from the `dependabot-prs` skill. Post
+via the MCP issue-comment tool, or `gh pr comment PR_NUMBER --repo OWNER/REPO
+--body '...'` as a fallback.
 
-| PR state | Action |
-|----------|--------|
-| Conflicted or `DIRTY` merge state | Comment `@dependabot rebase`. If the branch is stale after a rebase and no human edits exist, `@dependabot recreate`. |
-| Major bump you decide to defer | Leave it open and report. Do NOT `ignore` or `close` it. |
+For a conflicted, `DIRTY`, `BEHIND`, or stale branch, follow this bounded
+recovery sequence:
 
-Prefer direct approve and merge for clearly safe PRs. Use `@dependabot rebase`
-or `@dependabot recreate` to unblock the rest. When CI ends red, re-run the
-failed jobs once to absorb intermittent failures; if it is still red after that
-single rerun, leave the PR for a later run.
+1. Record the current head SHA and post `@dependabot rebase` once.
+2. Poll the PR every 60 seconds for up to 10 minutes, or the remaining decision
+   budget when shorter. A rebase succeeds only when the head SHA changes and the
+   PR remains open. Also inspect new Dependabot comments for an explicit command
+   failure; posting the command alone is not success.
+3. After a successful rebase, fetch the complete PR detail again, re-audit the
+   new diff and commits, and restart CI polling for the new head SHA. If the PR
+   is still `DIRTY`, `BEHIND`, conflicted, or stale, continue to step 4.
+4. Before recreate, verify that every PR commit is Dependabot-authored and that
+   no human edits need preservation. If this cannot be proven, do NOT recreate;
+   make a final NOT_MERGED decision requiring human action.
+5. Post `@dependabot recreate` at most once. Poll every 60 seconds for up to 10
+   minutes, or the remaining decision budget when shorter, until the head SHA
+   changes or Dependabot reports a command failure.
+6. After a successful recreate, fetch the complete PR detail again, re-audit the
+   new diff and commits, and restart CI polling for the new head SHA.
+7. If recreate fails, times out, leaves conflicts, or cannot finish within the
+   decision budget, make a final NOT_MERGED decision with that specific reason.
+
+Do not rebase or recreate a PR that already has a definitive safety blocker that
+those operations cannot fix, such as a disallowed major dependency update,
+unsafe file scope, unverifiable provenance, or unsupported GitHub Actions
+migration. Make the NOT_MERGED decision immediately for those blockers.
 
 ## Guardrails
 
@@ -209,32 +241,58 @@ single rerun, leave the PR for a later run.
 
 ## Final Report
 
+Always finish with exactly one decision: `MERGED`, `NOT_MERGED`, or
+`DRY_RUN_NO_ACTION`. Do not report an indeterminate result or merely say that a
+later run may decide.
+
 Print a concise summary with:
 
 - The repository and target PR checked.
-- Whether the PR was approved and merged, with its URL.
-- If the PR was left open or skipped, a one-line reason: major bump, failing
-  checks, pending checks, conflicts, non-manifest diff, already closed, or
-  similar.
-- Any `@dependabot` command posted, with the PR URL and why.
+- The final decision and PR URL.
+- For `NOT_MERGED`, the explicit terminal reason and required human or automated
+  next action. Name failed or pending checks, dependency version transitions,
+  unsafe files, conflicts, command failures, or missing evidence as applicable.
+- Each failed-job rerun, rebase, recreate, approval, and merge attempt, including
+  whether it completed and whether the head SHA changed.
 
 ## Teams Notification
 
-Do NOT send a Teams notification by default. Send one only when the user prompt
-explicitly requests a Teams notification for this run. A configured
-`PERSONAL_NOTIFICATION_URL`, `RECIPIENTS`, or `workflowRunUrl` does not count as
-an explicit request.
+Do NOT send a Teams notification by default. Send one only when BOTH are true:
 
-When explicitly requested, use the `send-teams-notification` skill at
-`.github/skills/send-teams-notification/SKILL.md` to deliver the same summary to
-Teams:
+- The user prompt explicitly requests a Teams notification for this run. A
+  configured `PERSONAL_NOTIFICATION_URL`, `RECIPIENTS`, or `workflowRunUrl` does
+  not count as an explicit request.
+- Processing finishes without merging the target PR.
+
+Never notify recipients when the PR was merged successfully.
+
+When both conditions hold, use the `send-teams-notification` skill at
+`.github/skills/send-teams-notification/SKILL.md` to report the failed merge:
 
 - Send ONE notification per recipient for this target PR: split `RECIPIENTS` on
   commas or semicolons, trim whitespace, and POST the payload once per email
   address.
-- Build a concise Markdown `message` from the report: the target PR URL, result,
-  reason, and any `@dependabot` command posted.
-- Use a `title` like `Dependabot triage - OWNER/REPO#NUMBER - RESULT`.
+- State explicitly that the PR was NOT merged, then give the specific reason and
+  required next action. Do not use a generic status such as "unsafe" or
+  "skipped" without explaining why.
+- Distinguish at least these outcomes when applicable:
+  - Consistent CI failure: name the checks still failing after the one permitted
+    rerun and state that their logs need investigation.
+  - Major version bump: name the dependencies and version transitions that need
+    human compatibility review, unless a GitHub Actions bump passed the special
+    gate.
+  - Merge conflict or dirty branch: state whether `@dependabot rebase` and
+    `@dependabot recreate` succeeded, failed, or timed out; include the resulting
+    head SHA and remaining blocker.
+  - Pending CI: name the checks still running and state that the next scheduled
+    run will retry.
+  - Unsafe diff or unsupported scope: identify the unexpected files or change
+    type requiring human review.
+  - Missing or unverifiable safety evidence: identify exactly what could not be
+    verified.
+- Include the target PR URL, any `@dependabot` command posted, and its outcome.
+- Use a `title` like
+  `Dependabot triage - OWNER/REPO#NUMBER - NOT MERGED`.
 - Include the `WORKFLOW_RUN_URL` value, or any `workflowRunUrl` provided in the
   prompt, when building the notification.
 - If `PERSONAL_NOTIFICATION_URL` or `RECIPIENTS` is empty, skip the notification
