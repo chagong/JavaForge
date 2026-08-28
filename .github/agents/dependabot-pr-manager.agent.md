@@ -91,6 +91,11 @@ A PR is SAFE to merge ONLY when ALL are true:
 - Every check run is `COMPLETED` with conclusion `SUCCESS`, `NEUTRAL`, or
   `SKIPPED`; every status context is `SUCCESS`. No failures, pending checks,
   in-progress checks, queued checks, or missing required checks.
+- The PR passes either the standard dependency gate or the special GitHub
+  Actions gate below. Never mix the two gates in one PR.
+
+### Standard Dependency Gate
+
 - The diff touches ONLY dependency manifests and lockfiles: `package.json`,
   `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `pom.xml`, `build.gradle`,
   `gradle.lockfile`, `*.gradle`, and similar dependency files. No source code,
@@ -99,15 +104,57 @@ A PR is SAFE to merge ONLY when ALL are true:
   semver component as the major version; if it increases, the PR is NOT low
   risk.
 
+### Special GitHub Actions Gate
+
+A Dependabot PR that updates GitHub Actions MAY pass this gate even when action
+major versions increase, but ONLY when ALL of these additional conditions hold:
+
+- Every changed file is under `.github/workflows/` and has a `.yml` or `.yaml`
+  extension.
+- Every added and removed line in the patch is an action `uses:` reference or
+  its same-line version comment. Reject changes to workflow triggers,
+  permissions, jobs, steps, inputs, expressions, scripts, commands, environment
+  variables, runner labels, or any other workflow content. Ignore diff headers
+  and unchanged context lines when applying this rule.
+- Every changed reference is a remote action from the GitHub-controlled
+  `actions/*` or `github/*` namespace. Reject third-party actions, Docker
+  actions, local actions, and reusable workflow references.
+- Both the old and new action references use immutable full 40-character commit
+  SHAs. Mutable tags or branches such as `@v4`, `@main`, or `@latest` are not
+  safe.
+- Each new SHA is the commit for the release tag named by its adjacent version
+  comment (for example, SHA plus `# v5.0.0`). Verify this against the upstream
+  action repository through the GitHub API, peeling annotated tags when needed.
+  Reject missing tags, mismatched SHAs, or comments that are absent or unclear.
+- Inspect the release notes or migration notes for every crossed major version.
+  Reject the PR if an action removed or changed an input used by these
+  workflows, changed artifact compatibility needed across upload/download
+  steps, requires an unsupported runner or runtime, or otherwise needs a
+  workflow edit. Do not infer compatibility from a green unrelated check.
+- For paired actions such as `actions/upload-artifact` and
+  `actions/download-artifact`, verify their new major versions are documented
+  as mutually compatible.
+- The complete PR check rollup is green. At least one successful required check
+  must exercise each changed build or test workflow. Workflows used only for
+  issue triage, scheduling, or manual dispatch may be accepted without direct
+  PR execution only when their changes are limited to already-verified action
+  references and the upstream migration notes show their existing inputs remain
+  compatible.
+
+If any part of this verification cannot be completed, the PR does not pass the
+special gate.
+
 ## Do Not Merge
 
 Leave a PR open and report it when:
 
-- It is a MAJOR version bump, such as `6.x -> 7.x` or `20.x -> 25.x`.
+- It is a MAJOR version bump, such as `6.x -> 7.x` or `20.x -> 25.x`, unless it
+  fully passes the special GitHub Actions gate.
 - Any check is failing, pending, in progress, queued, or missing.
 - `mergeStateStatus` is `DIRTY`, or the branch has conflicts.
 - The diff changes source code, CI workflows, or anything beyond manifests and
-  lockfiles.
+  lockfiles, unless it is an Actions-only workflow diff that fully passes the
+  special GitHub Actions gate.
 - Provenance or scope is unclear in any way.
 
 ## Merge Procedure For Safe PRs
