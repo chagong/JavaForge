@@ -52,14 +52,24 @@ inside the 60-minute matrix job to create and upload the final response.
 
 On every refreshed state, proceed in this order:
 
-1. Stop on a definitive safety blocker from the `dependabot-pr` skill.
-2. Recover a `DIRTY`, `BEHIND`, conflicted, or stale branch.
-3. Poll CI for the current head SHA and perform the one permitted failed-job
+1. Validate the target, open state, and authorship. Stop without writes when the
+   target is invalid, is not Dependabot-authored, or is closed.
+2. Determine branch-recovery eligibility from commit provenance and possible
+   human edits. If recovery is needed but eligibility is unproven, skip the
+   write and record the exact concern for the final report.
+3. Record definitive safety blockers, but do not return `NOT_MERGED` yet when
+   the branch is eligible for safe recovery.
+4. Recover a `DIRTY`, `BEHIND`, conflicted, or stale branch before the final
+   merge decision, even when an independent blocker will remain afterward.
+5. Re-fetch and re-audit the complete PR after any head-SHA change.
+6. Poll CI for the current head SHA and perform the one permitted failed-job
    rerun when needed.
-4. Approve and merge if the current head passes every safety rule.
+7. Stop on any definitive safety blocker that remains after branch recovery and
+   current-head CI evaluation.
+8. Approve and merge if the current head passes every safety rule.
 
-Continue until the PR is merged, a definitive blocker is established, or the
-budget expires.
+Continue until the PR is merged, branch recovery and current-head CI have been
+evaluated and a definitive blocker remains, or the budget expires.
 
 ## CI Polling and Rerun
 
@@ -87,25 +97,30 @@ budget expires.
 
 For a `DIRTY`, `BEHIND`, conflicted, or stale branch:
 
-1. Record the current head SHA and post `@dependabot rebase` once.
-2. Poll every 60 seconds for at most 10 minutes, or the remaining decision
+1. Confirm the PR is open and not a draft, every branch commit is
+   Dependabot-authored, and no human edits need preservation. If any condition
+   is unproven, do not mutate the branch; report the exact concern.
+2. Record the current head SHA and post `@dependabot rebase` once. Do not skip
+   this attempt solely because an independent blocker such as a disallowed
+   major update or unsafe diff will still prevent automatic merging.
+3. Poll every 60 seconds for at most 10 minutes, or the remaining decision
    budget when shorter.
-3. Count rebase as successful only when the head SHA changes and the PR remains
+4. Count rebase as successful only when the head SHA changes and the PR remains
    open. Also inspect Dependabot's response for a command failure.
-4. Fetch and re-audit the complete PR after a successful rebase.
-5. If the blocker remains, verify that all branch commits are
-   Dependabot-authored and no human edits need preservation. If this cannot be
-   proven, do not recreate.
-6. Post `@dependabot recreate` at most once, then poll for at most 10 minutes or
+5. Fetch and re-audit the complete PR after a successful rebase, then evaluate
+   CI only for the new head before making the final decision.
+6. If rebase fails, do not recreate merely to refresh a PR that has an
+   independent definitive safety blocker. Report both the failed rebase and the
+   remaining blocker.
+7. If branch recovery is the only blocker to an otherwise safe automatic merge,
+   reconfirm that every commit is Dependabot-authored and no human edits need
+   preservation. If this cannot be proven, do not recreate.
+8. Post `@dependabot recreate` at most once, then poll for at most 10 minutes or
    the remaining budget.
-7. Count recreation as successful only when the head SHA changes. Fetch and
+9. Count recreation as successful only when the head SHA changes. Fetch and
    re-audit the complete PR and restart CI polling.
-8. If recreation fails, times out, or leaves the blocker, make a final
+10. If recreation fails, times out, or leaves the blocker, make a final
    `NOT_MERGED` decision with the observed result.
-
-Do not rebase or recreate when a definitive blocker cannot be fixed by changing
-the branch, such as an unsafe diff, a disallowed major update, or unverifiable
-provenance.
 
 ## Approval and Merge
 
@@ -147,6 +162,11 @@ Then include:
 - `Next action`: the specific human or automated action required. Use `None`
   when merged.
 - `Workflow run`: include the `workflowRunUrl` from the prompt when supplied.
+
+For a successfully rebased PR that remains ineligible, state that recovery
+succeeded and report the independent remaining blocker. Do not classify it as
+still behind or ask the maintainer to rebase it again. If recovery was skipped
+or failed, report the exact reason separately from any safety blocker.
 
 If the target is already merged, report `MERGED` and say no action was needed.
 If it is closed without merge, invalid, non-Dependabot, or unverifiable, report

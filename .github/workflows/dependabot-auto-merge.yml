@@ -370,6 +370,7 @@ jobs:
           - prioritizes every NOT_MERGED pull request;
           - states each concrete no-merge reason and required next action;
           - keeps repository, PR, dependency transition, CI, and recovery details needed for recipients to act;
+          - distinguishes successful, failed, skipped, and unnecessary branch recovery from the remaining no-merge blocker, and never describes a successfully rebased PR as still behind;
           - includes ${WORKFLOW_RUN_URL}.
 
           Split the RECIPIENTS environment variable on commas or semicolons and trim whitespace. Send the same aggregated report exactly once to each non-empty recipient through the skill, using PERSONAL_NOTIFICATION_URL and WORKFLOW_RUN_URL. Do not send to any other address. Never retry a notification unless a definite non-2xx response or connection failure confirms it was not delivered; do not retry an ambiguous result.

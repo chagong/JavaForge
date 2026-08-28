@@ -109,20 +109,31 @@ additional condition below passes:
 
 If any evidence is missing or unverifiable, the applicable gate fails.
 
-## CI and Branch Recovery
+## Branch Recovery and CI
 
+- Branch recovery is allowed only for an open, non-draft, Dependabot-authored PR
+  under an active management request. Before writing, prove that all branch
+  commits are Dependabot-authored and that no human edits need preservation.
+- For an eligible `DIRTY`, `BEHIND`, conflicted, or stale branch, request
+  `@dependabot rebase` before making the final merge decision. Do this even when
+  an independent safety blocker, such as a compatibility-sensitive major
+  update, is already known and will still require human review.
+- Record the old head SHA and count the rebase as successful only when the SHA
+  changes and the PR remains open. Posting a command is not proof of success;
+  inspect the changed PR state and Dependabot's response comment.
+- After any head-SHA change, discard all previous diff and CI conclusions.
+  Fetch the PR again, re-audit it, and evaluate checks for the new head before
+  returning a final decision.
+- If safe recovery eligibility cannot be proven, skip the rebase and report the
+  exact provenance or human-edit concern.
+- Recreation is more restrictive because it can discard branch changes. If
+  rebase fails, use `@dependabot recreate` only when branch recovery is required
+  for an otherwise automatically mergeable PR and no independent safety blocker
+  would remain. Reconfirm that no human edits need preservation, request
+  recreation once, and verify that the head SHA changes.
 - Do not approve or merge while any check for the current head SHA is pending.
 - If failed jobs may be transient and the user authorized active management,
   rerun failed jobs once, then wait for the rerun's terminal result.
-- For a `DIRTY`, `BEHIND`, conflicted, or stale Dependabot branch, request
-  `@dependabot rebase`, record the old head SHA, and verify that the SHA changes.
-- If rebase fails and recreation is authorized, first prove that no human edits
-  need preservation. Then request `@dependabot recreate` once and verify the new
-  head SHA.
-- After any head-SHA change, discard all previous diff and CI conclusions.
-  Fetch the PR again, re-audit it, and evaluate checks for the new head.
-- Posting a command is not proof of success. Inspect the changed PR state and
-  Dependabot's response comment.
 
 ## Approve and Merge
 
@@ -191,6 +202,9 @@ Return a concise, self-contained report for this one PR:
 - Actions attempted, including rerun, rebase, recreate, approval, merge, or
   Dependabot commands, with their observed results.
 - If not merged, the exact blocker and required next action.
+- For a recovered PR that remains ineligible, distinguish the successful branch
+  recovery from the remaining safety blocker. Do not tell a maintainer to rebase
+  a branch that this run already rebased successfully.
 
 Do not claim safety merely because Dependabot opened the PR. The current diff,
 provenance, mergeability, reviews, and CI evidence must agree.
