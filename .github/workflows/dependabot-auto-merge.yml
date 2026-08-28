@@ -4,7 +4,7 @@ name: Dependabot Auto-Merge (Copilot CLI)
 # merge low-risk Dependabot pull requests across all Microsoft-managed Java
 # tooling repositories in this workspace.
 #
-# Requirements (two repository secrets):
+# Required repository secrets:
 #   - `GH_PAT`: a Personal Access Token (classic or fine-grained) with
 #     `repo` + `pull_request` write access to every target microsoft/* repo.
 #     Used by the gh CLI and any GitHub API access (the default `GITHUB_TOKEN`
@@ -13,8 +13,8 @@ name: Dependabot Auto-Merge (Copilot CLI)
 #   - `COPILOT_CLI_TOKEN`: a token with a GitHub Copilot entitlement, used by
 #     the Copilot CLI itself. Wired into COPILOT_GITHUB_TOKEN. May be the same
 #     PAT as GH_PAT if that account also has a Copilot entitlement.
-#   - `PERSONAL_NOTIFICATION_URL`: Azure Logic App HTTP trigger URL used by the
-#     send-teams-notification skill to deliver the run summary to Teams.
+#   - `PERSONAL_NOTIFICATION_URL`: Azure Logic App HTTP trigger URL used to send
+#     one aggregated report when at least one PR is not merged.
 #   - `RECIPIENTS`: comma/semicolon-separated list of recipient email addresses
 #     for the Teams notification.
 
@@ -76,7 +76,7 @@ jobs:
       - name: Upload repository PR list
         uses: actions/upload-artifact@v4
         with:
-          name: dependabot-prs-${{ matrix.slug }}
+          name: dependabot-pr-list-${{ matrix.slug }}
           path: discovered-prs/prs.json
           retention-days: 1
 
@@ -90,7 +90,7 @@ jobs:
       - name: Download repository PR lists
         uses: actions/download-artifact@v4
         with:
-          pattern: dependabot-prs-*
+          pattern: dependabot-pr-list-*
           path: discovered-prs
 
       - name: Build pull request matrix
@@ -115,13 +115,12 @@ jobs:
       # COPILOT_CLI_TOKEN provides the Copilot CLI entitlement.
       GH_TOKEN: ${{ secrets.GH_PAT }}
       GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-      # Teams notification (send-teams-notification skill).
-      PERSONAL_NOTIFICATION_URL: ${{ secrets.PERSONAL_NOTIFICATION_URL }}
-      RECIPIENTS: ${{ secrets.RECIPIENTS }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}
       TARGET_REPOSITORY: ${{ matrix.repository }}
       TARGET_PR_NUMBER: ${{ matrix.number }}
+      TARGET_PR_TITLE: ${{ matrix.title }}
       TARGET_PR_URL: ${{ matrix.url }}
     steps:
       - name: Checkout (for the Dependabot agent and skills)
@@ -140,28 +139,75 @@ jobs:
 
       - name: Manage Dependabot PR
         run: |
+          RESPONSE_DIR="${RUNNER_TEMP}/dependabot-response"
+          RESPONSE_FILE="${RESPONSE_DIR}/${{ matrix.slug }}-${TARGET_PR_NUMBER}.md"
+          mkdir -p "$RESPONSE_DIR" copilot-logs
+
           PROMPT="Manage only the Dependabot pull request at ${TARGET_PR_URL} (${TARGET_REPOSITORY}#${TARGET_PR_NUMBER}).
 
           Do not list, inspect, comment on, approve, merge, or otherwise modify any other pull request.
 
-          The 'workflowRunUrl' is ${WORKFLOW_RUN_URL}.
-
-          If and only if the final decision is NOT_MERGED, send the required Teams notification to the configured recipients with the explicit reason and next action."
+          The 'workflowRunUrl' is ${WORKFLOW_RUN_URL}. Return the complete final response required by the agent contract. Do not send any notification."
           if [ "$DRY_RUN" = "true" ]; then
             PROMPT="$PROMPT
 
           DRY RUN MODE IS ENABLED: Do NOT approve, merge, comment on, or modify any pull request. Only audit and print the report."
           fi
-          mkdir -p copilot-logs
+
+          set +e
           copilot \
             --allow-all \
             --enable-all-github-mcp-tools \
             --no-ask-user \
+            --no-color \
+            --silent \
+            --stream off \
             --agent "Dependabot PR Manager" \
             --log-level debug \
             --log-dir ./copilot-logs \
             --share ./copilot-session.md \
-            --prompt "$PROMPT"
+            --prompt "$PROMPT" > "$RESPONSE_FILE"
+          copilot_status=$?
+          set -e
+
+          if ! head -n 1 "$RESPONSE_FILE" | grep -Eq '^Decision: (MERGED|NOT_MERGED|DRY_RUN_NO_ACTION)$'; then
+            merged_at="$(gh pr view "$TARGET_PR_NUMBER" --repo "$TARGET_REPOSITORY" --json mergedAt --jq '.mergedAt // empty' 2>/dev/null || true)"
+            if [ -n "$merged_at" ]; then
+              decision="MERGED"
+              reason="The Copilot CLI did not return the required response contract, but GitHub confirms that the PR was merged at ${merged_at}."
+              next_action="Inspect the workflow logs to verify the agent's actions."
+            else
+              decision="NOT_MERGED"
+              reason="The Copilot CLI exited with status ${copilot_status} without a valid final response, and the workflow could not verify that the PR merged."
+              next_action="Inspect the Copilot session and workflow logs, then manage this PR manually or rerun the workflow."
+            fi
+
+            cat > "$RESPONSE_FILE" <<EOF
+          Decision: ${decision}
+          Repository: ${TARGET_REPOSITORY}
+          Pull request: [#${TARGET_PR_NUMBER} - ${TARGET_PR_TITLE}](${TARGET_PR_URL})
+          Update: Unavailable because the agent did not produce a valid final response.
+          Safety assessment: Incomplete.
+          Final state: See the PR and workflow logs.
+          Actions taken: See the Copilot session log.
+          Reason: ${reason}
+          Next action: ${next_action}
+          Workflow run: ${WORKFLOW_RUN_URL}
+          EOF
+            copilot_status=1
+          fi
+
+          cat "$RESPONSE_FILE"
+          exit "$copilot_status"
+
+      - name: Upload final response
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependabot-response-${{ matrix.slug }}-${{ matrix.number }}
+          path: ${{ runner.temp }}/dependabot-response/${{ matrix.slug }}-${{ matrix.number }}.md
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Upload Copilot logs
         if: ${{ always() }}
@@ -170,5 +216,178 @@ jobs:
           name: copilot-logs-${{ matrix.slug }}-${{ matrix.number }}
           path: |
             ./copilot-session.md
+          if-no-files-found: ignore
+          retention-days: 14
+
+  notify:
+    name: Send aggregated Teams notification
+    needs:
+      - build-pull-request-matrix
+      - manage-dependabot
+    if: ${{ always() && needs.build-pull-request-matrix.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_MATRIX: ${{ needs.build-pull-request-matrix.outputs.matrix }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_CLI_TOKEN }}
+      PERSONAL_NOTIFICATION_URL: ${{ secrets.PERSONAL_NOTIFICATION_URL }}
+      RECIPIENTS: ${{ secrets.RECIPIENTS }}
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Checkout (for the notification skill)
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install GitHub Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Download final responses
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dependabot-response-*
+          path: responses
+          merge-multiple: true
+
+      - name: Aggregate final responses
+        id: aggregate
+        shell: bash
+        run: |
+          mkdir -p responses
+          expected_count="$(jq '.include | length' <<< "$EXPECTED_MATRIX")"
+
+          while IFS= read -r pull_request; do
+            repository="$(jq -r '.repository' <<< "$pull_request")"
+            slug="$(jq -r '.slug' <<< "$pull_request")"
+            number="$(jq -r '.number' <<< "$pull_request")"
+            title="$(jq -r '.title' <<< "$pull_request")"
+            url="$(jq -r '.url' <<< "$pull_request")"
+            response_file="responses/${slug}-${number}.md"
+
+            if [ ! -s "$response_file" ]; then
+              cat > "$response_file" <<EOF
+          Decision: NOT_MERGED
+          Repository: ${repository}
+          Pull request: [#${number} - ${title}](${url})
+          Update: Unavailable because no final response artifact was produced.
+          Safety assessment: Incomplete.
+          Final state: Unknown.
+          Actions taken: The PR worker did not produce a final response.
+          Reason: The matrix job failed or stopped before its final response could be uploaded.
+          Next action: Inspect this workflow run and manage the PR manually or rerun the workflow.
+          Workflow run: ${WORKFLOW_RUN_URL}
+          EOF
+            fi
+          done < <(jq -c '.include[]' <<< "$EXPECTED_MATRIX")
+
+          mapfile -t response_files < <(find responses -maxdepth 1 -type f -name '*.md' -print | sort)
+          not_merged=0
+          merged=0
+          dry_run=0
+
+          for response_file in "${response_files[@]}"; do
+            case "$(head -n 1 "$response_file")" in
+              "Decision: MERGED")
+                merged=$((merged + 1))
+                ;;
+              "Decision: NOT_MERGED")
+                not_merged=$((not_merged + 1))
+                ;;
+              "Decision: DRY_RUN_NO_ACTION")
+                dry_run=$((dry_run + 1))
+                ;;
+              *)
+                original_response="$(cat "$response_file")"
+                cat > "$response_file" <<EOF
+          Decision: NOT_MERGED
+          Repository: Unknown
+          Pull request: Unknown
+          Update: Unavailable because the final response was malformed.
+          Safety assessment: Incomplete.
+          Final state: Unknown.
+          Actions taken: A response artifact was produced but did not satisfy the agent contract.
+          Reason: The first line did not contain a recognized decision.
+          Next action: Inspect the raw response below and the workflow logs.
+          Workflow run: ${WORKFLOW_RUN_URL}
+
+          Raw response:
+
+          ${original_response}
+          EOF
+                not_merged=$((not_merged + 1))
+                ;;
+            esac
+          done
+
+          SUMMARY_FILE="${RUNNER_TEMP}/dependabot-summary.md"
+          {
+            echo "# Dependabot auto-merge report"
+            echo
+            echo "- PRs discovered: ${expected_count}"
+            echo "- Merged: ${merged}"
+            echo "- Not merged: ${not_merged}"
+            echo "- Dry-run audits: ${dry_run}"
+            echo
+
+            for response_file in "${response_files[@]}"; do
+              echo "---"
+              echo
+              cat "$response_file"
+              echo
+            done
+          } > "$SUMMARY_FILE"
+
+          cat "$SUMMARY_FILE" >> "$GITHUB_STEP_SUMMARY"
+          echo "not_merged=${not_merged}" >> "$GITHUB_OUTPUT"
+
+      - name: Send aggregated Teams notification
+        if: ${{ steps.aggregate.outputs.not_merged != '0' }}
+        shell: bash
+        run: |
+          if [ -z "$PERSONAL_NOTIFICATION_URL" ]; then
+            echo "::error::PERSONAL_NOTIFICATION_URL is required when one or more PRs are not merged."
+            exit 1
+          fi
+          if [ -z "$RECIPIENTS" ]; then
+            echo "::error::RECIPIENTS is required when one or more PRs are not merged."
+            exit 1
+          fi
+
+          PROMPT="Use the send-teams-notification skill at .github/skills/send-teams-notification/SKILL.md.
+
+          Read ${RUNNER_TEMP}/dependabot-summary.md as source evidence for this workflow run. Compose a concise, readable Markdown report that:
+          - summarizes the overall merged, not-merged, and dry-run counts;
+          - prioritizes every NOT_MERGED pull request;
+          - states each concrete no-merge reason and required next action;
+          - keeps repository, PR, dependency transition, CI, and recovery details needed for recipients to act;
+          - includes ${WORKFLOW_RUN_URL}.
+
+          Split the RECIPIENTS environment variable on commas or semicolons and trim whitespace. Send the same aggregated report exactly once to each non-empty recipient through the skill, using PERSONAL_NOTIFICATION_URL and WORKFLOW_RUN_URL. Do not send to any other address. Never retry a notification unless a definite non-2xx response or connection failure confirms it was not delivered; do not retry an ambiguous result.
+
+          Use a title like 'Dependabot auto-merge - ${{ steps.aggregate.outputs.not_merged }} PR(s) not merged'. After all attempts, include the exact title and Markdown report sent, then list each recipient and its confirmed HTTP status or exact failure. Do not manage pull requests or modify repository files."
+
+          mkdir -p copilot-notification-logs
+          copilot \
+            --allow-all \
+            --no-ask-user \
+            --no-color \
+            --silent \
+            --stream off \
+            --log-level debug \
+            --log-dir ./copilot-notification-logs \
+            --share ./copilot-notification-session.md \
+            --prompt "$PROMPT" | tee ./copilot-notification-result.md
+
+      - name: Upload notification session
+        if: ${{ always() && steps.aggregate.outputs.not_merged != '0' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: copilot-notification-session
+          path: |
+            ./copilot-notification-result.md
+            ./copilot-notification-session.md
           if-no-files-found: ignore
           retention-days: 14
