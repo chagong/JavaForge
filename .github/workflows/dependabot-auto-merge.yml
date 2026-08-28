@@ -161,6 +161,7 @@ jobs:
             --enable-all-github-mcp-tools \
             --no-ask-user \
             --no-color \
+            --output-format json \
             --silent \
             --stream off \
             --agent "Dependabot PR Manager" \
@@ -171,14 +172,9 @@ jobs:
           copilot_status=$?
           set -e
 
-          awk '
-            !found && /^[[:space:]]*Decision: (MERGED|NOT_MERGED|DRY_RUN_NO_ACTION)[[:space:]]*$/ {
-              sub(/^[[:space:]]*/, "")
-              sub(/[[:space:]]*$/, "")
-              found = 1
-            }
-            found { print }
-          ' "$RAW_RESPONSE_FILE" > "$RESPONSE_FILE"
+          jq -rs \
+            '[.[] | select(.type == "assistant.message" and .data.phase == "final_answer") | .data.content] | last // ""' \
+            "$RAW_RESPONSE_FILE" > "$RESPONSE_FILE"
 
           if ! head -n 1 "$RESPONSE_FILE" | grep -Eq '^Decision: (MERGED|NOT_MERGED|DRY_RUN_NO_ACTION)$'; then
             merged_at="$(gh pr view "$TARGET_PR_NUMBER" --repo "$TARGET_REPOSITORY" --json mergedAt --jq '.mergedAt // empty' 2>/dev/null || true)"
