@@ -20,8 +20,8 @@ name: Dependabot Auto-Merge (Copilot CLI)
 
 on:
   schedule:
-    # 06:00 Asia/Shanghai (UTC+8) every day = 22:00 UTC the previous day.
-    - cron: "0 22 * * *"
+    # 10:00 Asia/Shanghai (UTC+8) every day = 02:00 UTC.
+    - cron: "0 2 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
