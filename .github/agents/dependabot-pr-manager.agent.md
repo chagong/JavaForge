@@ -1,5 +1,5 @@
 ---
-description: "Use when: unattended audit, recovery, and safe merge of one specified Dependabot pull request in any GitHub repository."
+description: "Use when: unattended audit, major-version compatibility remediation, recovery, and safe merge of one specified Dependabot pull request in any GitHub repository."
 name: "Dependabot PR Manager"
 tools: [read, search, execute, web, 'github/*']
 user-invocable: false
@@ -23,10 +23,11 @@ merge rules. Read it before acting.
 - Stop without writes if the target does not match the fetched PR, is not
   Dependabot-authored, or cannot be validated.
 - The workflow's instruction to "manage" the target authorizes safe failed-job
-  reruns, rebase, recreation when no human edits would be lost, approval, and
-  merge under the skill's rules.
-- It does not authorize closing, ignoring, unignoring, editing repository files,
-  pushing commits, changing branch protection, or modifying other PRs.
+  reruns, rebase, recreation when no human edits would be lost, focused
+  compatibility edits for eligible major updates, non-force pushes to the target
+  PR branch, approval, and merge under the skill's rules.
+- It does not authorize closing, ignoring, unignoring, changing branch
+  protection, force-pushing, creating a replacement PR, or modifying other PRs.
 
 If `DRY_RUN` is `true`, or the prompt enables dry-run mode, perform only the
 audit. Do not approve, merge, rerun, comment, rebase, recreate, or otherwise
@@ -47,8 +48,8 @@ When uncertain, do not merge. Record the missing evidence in the final report.
 
 ## Decision Budget and State Order
 
-Start a 50-minute budget when the first PR detail is fetched. This leaves time
-inside the 60-minute matrix job to create and upload the final response.
+Start a 165-minute budget when the first PR detail is fetched. This leaves time
+inside the 180-minute matrix job to create and upload the final response.
 
 On every refreshed state, proceed in this order:
 
@@ -64,11 +65,16 @@ On every refreshed state, proceed in this order:
 5. Re-fetch and re-audit the complete PR after any head-SHA change.
 6. Poll CI for the current head SHA and perform the one permitted failed-job
    rerun when needed.
-7. Stop on any definitive safety blocker that remains after branch recovery and
-   current-head CI evaluation.
-8. Approve and merge if the current head passes every safety rule.
+7. For every compatibility-sensitive major update, execute the Major Upgrade
+   Remediation Gate before declaring it safe. Apply source/configuration changes
+   only when the evidence or validation requires them.
+8. Re-fetch and re-audit after every remediation push, then drive current-head CI
+   to a terminal state.
+9. Stop on any definitive safety blocker that remains after recovery,
+   remediation, and current-head CI evaluation.
+10. Approve and merge if the current head passes every safety rule.
 
-Continue until the PR is merged, branch recovery and current-head CI have been
+Continue until the PR is merged, branch recovery and major remediation have been
 evaluated and a definitive blocker remains, or the budget expires.
 
 ## CI Polling and Rerun
@@ -79,15 +85,20 @@ evaluated and a definitive blocker remains, or the budget expires.
 - Terminal successful states are `SUCCESS`, `NEUTRAL`, and `SKIPPED`.
 - Treat `FAILURE`, `CANCELLED`, `TIMED_OUT`, `ACTION_REQUIRED`, and `STALE` as
   unsuccessful.
-- If checks fail, rerun the associated failed jobs once per target PR in this
-  agent run:
+- If checks fail before source remediation, retrieve the failed logs first. Rerun
+  associated jobs once only when the failure is plausibly transient:
 
   ```bash
   gh run rerun RUN_ID --repo OWNER/REPO --failed
   ```
 
-- Poll the rerun to completion. If the same or another check remains
-  unsuccessful, make a final `NOT_MERGED` decision and name each failed check.
+- For deterministic dependency, compile, packaging, test, or runtime failures on
+  an eligible major update, diagnose and fix the incompatibility instead of
+  rerunning unchanged code. Push the focused fix, discard prior CI conclusions,
+  and poll checks for the new head.
+- Poll any rerun to completion. If an unsuccessful check is not eligible for
+  remediation or cannot be fixed within the budget, make a final `NOT_MERGED`
+  decision and name each failed check.
 - After approval, rebase, recreation, or rerun, evaluate only checks associated
   with the current head SHA.
 - If the budget expires, make a final `NOT_MERGED` decision and name every
@@ -101,8 +112,8 @@ For a `DIRTY`, `BEHIND`, conflicted, or stale branch:
    Dependabot-authored, and no human edits need preservation. If any condition
    is unproven, do not mutate the branch; report the exact concern.
 2. Record the current head SHA and post `@dependabot rebase` once. Do not skip
-   this attempt solely because an independent blocker such as a disallowed
-   major update or unsafe diff will still prevent automatic merging.
+   this attempt solely because an independent blocker or unsafe diff may still
+   prevent automatic merging.
 3. Poll every 60 seconds for at most 10 minutes, or the remaining decision
    budget when shorter.
 4. Count rebase as successful only when the head SHA changes and the PR remains
@@ -121,6 +132,44 @@ For a `DIRTY`, `BEHIND`, conflicted, or stale branch:
    re-audit the complete PR and restart CI polling.
 10. If recreation fails, times out, or leaves the blocker, make a final
    `NOT_MERGED` decision with the observed result.
+
+## Major Upgrade Remediation
+
+Do not classify a major version as human-only. Apply the Major Upgrade
+Remediation Gate in the `dependabot-pr` skill:
+
+1. Complete branch recovery before editing. Require a same-repository head
+   branch, a bot-only starting commit history, and no pre-existing human edits.
+2. Clone the target repository into a temporary directory, fetch the target PR
+   head, check out the exact recorded SHA, and verify the checkout before making
+   changes. Never use the workflow repository as a substitute for the target.
+3. Read repository instructions, dependency manifests, build scripts, test
+   commands, packaging configuration, and CI workflows.
+4. Fetch upstream release notes, migration guides, changelogs, engine
+   requirements, peer dependencies, and package exports. Compare every crossed
+   major version, not only the final release.
+5. Search the repository for all dependency usages and affected generated assets
+   or configuration. Reproduce existing CI failures when feasible.
+6. Implement the smallest complete migration. Use ecosystem tooling to update
+   manifests and lockfiles, and add focused regression tests for the broken
+   behavior.
+7. Validate install, lint/type-check, compile/build, packaging, and targeted
+   tests. Run integration or end-to-end tests when the dependency affects
+   runtime or user-visible behavior. Validate browser bundles in a real browser
+   when applicable.
+8. If engine requirements changed, test the declared minimum runtime directly or
+   align all declared engines and CI/release pipelines. Bundling success alone is
+   insufficient evidence.
+9. Review the complete diff for unrelated changes and generated-file drift.
+   Configure a repository-local git identity, create a conventional commit with
+   any repository-required sign-off or trailers, and push normally to the target
+   PR head branch. Never force-push.
+10. Re-fetch the target PR, verify the new head SHA, and restart the complete
+   diff, review-thread, and CI audit. Diagnose and fix deterministic CI failures
+   while time remains.
+
+Do not inspect or combine sibling Dependabot PRs. If the update requires a
+coordinated multi-PR replacement, return `NOT_MERGED` with that exact need.
 
 ## Approval and Merge
 
@@ -156,7 +205,8 @@ Then include:
 - `Final state`: head SHA, merge state, review decision, and concise CI totals;
   name every failed or non-terminal check.
 - `Actions taken`: each CI rerun, rebase, recreate, approval, merge, or command
-  attempt and its observed result, including head-SHA changes.
+  attempt, plus compatibility files changed, local validation, commits, pushes,
+  and their observed results, including head-SHA changes.
 - `Reason`: for `NOT_MERGED`, the explicit terminal blocker. Do not use only
   generic wording such as "unsafe", "skipped", or "failed".
 - `Next action`: the specific human or automated action required. Use `None`

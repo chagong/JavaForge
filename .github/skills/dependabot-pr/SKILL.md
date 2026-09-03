@@ -1,6 +1,6 @@
 ---
 name: dependabot-pr
-description: "Manage one GitHub Dependabot pull request in any repository. Use when: auditing a specific Dependabot PR, deciding whether it is safe to merge, approving or merging it, rebasing or recreating it, or issuing an @dependabot command. Input: one PR URL or OWNER/REPO#NUMBER plus the requested action."
+description: "Manage one GitHub Dependabot pull request in any repository. Use when: auditing a specific Dependabot PR, fixing compatibility issues from a major update, deciding whether it is safe to merge, approving or merging it, rebasing or recreating it, or issuing an @dependabot command. Input: one PR URL or OWNER/REPO#NUMBER plus the requested action."
 argument-hint: '<PR URL or OWNER/REPO#NUMBER> <action, e.g. audit, manage, merge-if-safe, rebase, recreate, ignore>'
 ---
 
@@ -27,8 +27,9 @@ may belong to any GitHub repository.
 Honor the user's requested action for the target PR:
 
 - `audit`: inspect and report only.
-- `manage` or `merge-if-safe`: audit, safely unblock when authorized, approve,
-  and merge only if every safety rule passes.
+- `manage` or `merge-if-safe`: audit, safely unblock when authorized, remediate
+  compatibility-sensitive major updates when eligible, approve, and merge only
+  if every safety rule passes.
 - `approve`: approve only if every safety rule passes; do not merge.
 - `merge`: merge only if every safety rule passes and required approval exists.
 - `rebase`, `recreate`, `reopen`, `cancel merge`, `merge later`, or
@@ -78,9 +79,65 @@ A target PR is safe to approve or merge only when all applicable rules pass:
   ecosystem.
 - The update is low risk. Patch and minor updates are normally eligible.
 - Major framework, runtime, build-tool, compiler, or other compatibility-sensitive
-  updates require human review and are not automatically safe.
+  updates must use the Major Upgrade Remediation Gate. Do not stop merely because
+  an update crosses a major version.
 - Source, workflow, infrastructure, or unrelated configuration changes fail this
   gate.
+
+### Major Upgrade Remediation Gate
+
+A compatibility-sensitive major update may be fixed and merged autonomously
+under `manage` or `merge-if-safe` only when all conditions below pass:
+
+- At entry, the PR changes only dependency manifests, lockfiles, checksums,
+  vendored dependency metadata, or expected generated dependency files.
+- The head branch belongs to the base repository, every existing commit is
+  Dependabot-authored, and no human edits need preservation. Remediate the target
+  PR branch in place; do not create, inspect, or modify another PR.
+- Fetch release notes, migration guides, changelogs, package metadata, runtime
+  engine constraints, peer dependencies, and the complete transitive lockfile
+  change. Missing or unverifiable breaking-change evidence fails this gate.
+- Search every usage and configuration surface affected by the dependency,
+  including imports, generated assets, build scripts, runtime loaders, test
+  discovery, workflows, and packaging. Read repository instructions and CI
+  workflows before editing.
+- Reproduce current CI or build failures and distinguish dependency
+  incompatibilities from transient infrastructure failures.
+- Implement only the compatibility changes required by the update. Source,
+  configuration, workflow, and test changes are allowed under this gate when
+  directly caused by the major upgrade; unrelated cleanup is not.
+- Use the repository's package manager or build tool to update manifests and
+  generated lockfiles. Do not hand-edit generated dependency metadata.
+- Add focused regression coverage for each migrated API or behavior. Validate
+  clean installation, lint/type-check, compile/build, packaging, and the smallest
+  relevant test suite. Run integration or end-to-end tests for runtime or
+  user-facing behavior; use a browser smoke test for browser assets when no
+  existing UI test covers them.
+- When runtime, compiler, package-manager, or editor engine requirements change,
+  test the minimum supported runtime directly or align the declared minimum and
+  all CI/release pipelines. Do not infer runtime compatibility from a successful
+  bundle alone.
+- Preserve failures explicitly. Do not add silent success fallbacks. If an
+  external inspection can fail, surface the error and represent an indeterminate
+  state rather than incorrectly reporting success or failure.
+- Review the final diff for scope, type safety, generated-file consistency, and
+  minimum-runtime behavior before pushing.
+- Push only after local validation passes. Use a conventional commit with any
+  repository-required sign-off or trailers and a normal, non-force push to the
+  target PR head branch. Agent-authored commits created during this run have
+  understood provenance and are eligible; human commits that predate the run
+  are not.
+- After every push, discard prior CI conclusions, fetch the new head, inspect the
+  complete diff, and drive CI to a terminal state. Diagnose deterministic
+  failures from logs, apply focused fixes, and repeat while the execution budget
+  permits.
+- The final head must have green required checks, no unresolved review threads,
+  and no unaddressed breaking-change evidence. Otherwise leave the PR open and
+  report the exact remaining blocker and failed validation.
+
+Related major updates from separate PRs may be consolidated only when the user
+explicitly requests a multi-PR workflow. This one-PR skill must never discover
+or modify sibling PRs.
 
 ### GitHub Actions-Only Gate
 
@@ -116,8 +173,7 @@ If any evidence is missing or unverifiable, the applicable gate fails.
   commits are Dependabot-authored and that no human edits need preservation.
 - For an eligible `DIRTY`, `BEHIND`, conflicted, or stale branch, request
   `@dependabot rebase` before making the final merge decision. Do this even when
-  an independent safety blocker, such as a compatibility-sensitive major
-  update, is already known and will still require human review.
+  an independent safety blocker is already known.
 - Record the old head SHA and count the rebase as successful only when the SHA
   changes and the PR remains open. Posting a command is not proof of success;
   inspect the changed PR state and Dependabot's response comment.
@@ -131,6 +187,9 @@ If any evidence is missing or unverifiable, the applicable gate fails.
   for an otherwise automatically mergeable PR and no independent safety blocker
   would remain. Reconfirm that no human edits need preservation, request
   recreation once, and verify that the head SHA changes.
+- Perform Dependabot rebase or recreation before major-upgrade remediation.
+  After an agent-authored compatibility commit is pushed, never recreate the PR
+  or use another operation that could discard that commit.
 - Do not approve or merge while any check for the current head SHA is pending.
 - If failed jobs may be transient and the user authorized active management,
   rerun failed jobs once, then wait for the rerun's terminal result.
@@ -199,8 +258,9 @@ Return a concise, self-contained report for this one PR:
 - Dependency or action version transitions and update type.
 - Diff scope and safety gate applied.
 - Final head SHA, merge state, review decision, and CI summary.
-- Actions attempted, including rerun, rebase, recreate, approval, merge, or
-  Dependabot commands, with their observed results.
+- Actions attempted, including rerun, rebase, recreate, approval, merge,
+  Dependabot commands, compatibility edits, local validation, commits, and
+  pushes, with their observed results.
 - If not merged, the exact blocker and required next action.
 - For a recovered PR that remains ineligible, distinguish the successful branch
   recovery from the remaining safety blocker. Do not tell a maintainer to rebase

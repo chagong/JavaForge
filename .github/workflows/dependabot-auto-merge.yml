@@ -1,7 +1,7 @@
 name: Dependabot Auto-Merge (Copilot CLI)
 
-# Runs on a daily schedule and uses the GitHub Copilot CLI to audit and safely
-# merge low-risk Dependabot pull requests across all Microsoft-managed Java
+# Runs on a daily schedule and uses the GitHub Copilot CLI to audit, remediate,
+# and safely merge Dependabot pull requests across all Microsoft-managed Java
 # tooling repositories in this workspace.
 #
 # Required repository secrets:
@@ -105,7 +105,7 @@ jobs:
     needs: build-pull-request-matrix
     if: ${{ needs.build-pull-request-matrix.outputs.count != '0' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -137,6 +137,9 @@ jobs:
       - name: Verify gh authentication
         run: gh auth status
 
+      - name: Configure git authentication
+        run: gh auth setup-git
+
       - name: Manage Dependabot PR
         run: |
           RESPONSE_DIR="${RUNNER_TEMP}/dependabot-response"
@@ -147,6 +150,8 @@ jobs:
           PROMPT="Manage only the Dependabot pull request at ${TARGET_PR_URL} (${TARGET_REPOSITORY}#${TARGET_PR_NUMBER}).
 
           Do not list, inspect, comment on, approve, merge, or otherwise modify any other pull request.
+
+          For an eligible compatibility-sensitive major update, you are authorized to clone the target repository, make the minimum source/configuration/test changes required by that update, commit them conventionally, and push normally to this PR's existing head branch. Do not create a replacement PR, combine sibling updates, or force-push.
 
           The 'workflowRunUrl' is ${WORKFLOW_RUN_URL}. Return the complete final response required by the agent contract. Do not send any notification."
           if [ "$DRY_RUN" = "true" ]; then
