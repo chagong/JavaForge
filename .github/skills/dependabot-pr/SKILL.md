@@ -1,6 +1,6 @@
 ---
 name: dependabot-pr
-description: "Manage one GitHub Dependabot pull request in any repository. Use when: auditing a specific Dependabot PR, fixing compatibility issues from a major update, deciding whether it is safe to merge, approving or merging it, rebasing or recreating it, or issuing an @dependabot command. Input: one PR URL or OWNER/REPO#NUMBER plus the requested action."
+description: "Manage one GitHub Dependabot pull request in any repository. Use when: auditing a specific Dependabot PR, removing an unused direct dependency, fixing compatibility issues from a major update, deciding whether it is safe to merge, approving or merging it, rebasing or recreating it, or issuing an @dependabot command. Input: one PR URL or OWNER/REPO#NUMBER plus the requested action."
 argument-hint: '<PR URL or OWNER/REPO#NUMBER> <action, e.g. audit, manage, merge-if-safe, rebase, recreate, ignore>'
 ---
 
@@ -28,8 +28,9 @@ Honor the user's requested action for the target PR:
 
 - `audit`: inspect and report only.
 - `manage` or `merge-if-safe`: audit, safely unblock when authorized, remediate
-  compatibility-sensitive major updates when eligible, approve, and merge only
-  if every safety rule passes.
+  compatibility-sensitive major updates when eligible, remove a direct
+  dependency when it is proven unused, approve, and merge only if every safety
+  rule passes.
 - `approve`: approve only if every safety rule passes; do not merge.
 - `merge`: merge only if every safety rule passes and required approval exists.
 - `rebase`, `recreate`, `reopen`, `cancel merge`, `merge later`, or
@@ -55,6 +56,56 @@ gh pr diff PR_NUMBER --repo OWNER/REPO
 Never decide from the title, Dependabot body, or top-level green status alone.
 Inspect the actual diff and the status of every check for the current head SHA.
 
+## Dependency Necessity Check
+
+Before retaining or upgrading any direct dependency, prove that the repository
+still needs it. Repeat this check after every compatibility refactor because a
+migration can remove the dependency's final usage.
+
+- Classify the dependency as runtime, development, optional, peer, plugin,
+  processor, build-tool, or generated-code input.
+- Search tracked source, tests, scripts, build files, workflow files, bundler
+  configuration, package metadata, extension/plugin declarations, command
+  strings, dynamic imports, reflection/service-loader configuration, and
+  generated-code inputs. Exclude lockfiles, vendored dependency directories, and
+  the dependency declaration itself from positive usage evidence.
+- Use ecosystem dependency analysis where available (`npm explain`/`npm ls`,
+  `pnpm why`, `yarn why`, Maven dependency analysis, Gradle dependency reports,
+  or the equivalent). A package remaining transitively installed does not prove
+  that its direct declaration is needed.
+- Map every imported or invoked API to the dependency that actually provides it.
+  Account for aliases, subpath imports, type-only imports, CLI binaries, loaders,
+  test adapters, and configuration-only usage. A plain text search alone is not
+  enough to prove absence.
+- If the only usages are private helpers that the remediation replaces with
+  platform APIs, local code, or another already-declared package, rerun the
+  complete search after that replacement.
+- When no required runtime, build, test, type, or configuration role remains,
+  prefer removing the direct dependency over upgrading it. Do not keep a package
+  merely because the original PR was opened as a version bump.
+- Do not reimplement substantial library behavior merely to make a dependency
+  removable. Prefer removal only when the remaining use is obsolete, private,
+  trivial to replace with platform APIs or already-declared packages, and covered
+  by focused tests.
+- Remove it with the ecosystem package manager so manifests and lockfiles stay
+  synchronized. Also remove obsolete overrides, externals, allowlists, notices,
+  license entries, and packaging metadata directly tied to that dependency.
+- When converting a bump PR into a removal, first restore the affected manifests
+  and lockfiles from the PR base, preserve the focused source/test remediation,
+  and then run the ecosystem removal command. This prevents bump-only transitive
+  resolution churn from surviving the removal.
+- Verify the direct declaration is gone and explain whether the package also
+  disappeared from the resolved tree or remains only as a transitive dependency.
+- Validate clean installation, compile/build, packaging, and relevant tests after
+  removal. For runtime dependencies, confirm the packaged artifact no longer
+  contains or requires the package.
+- When removal is proven, update the target PR title and body to describe removal
+  rather than a bump. Do not post an ignore command; removing the manifest entry
+  prevents Dependabot from proposing that direct update again.
+- If usage is dynamic or otherwise cannot be proven absent, do not remove the
+  dependency. Continue with a justified upgrade or report the uncertainty as a
+  blocker.
+
 ## Safety Rules
 
 A target PR is safe to approve or merge only when all applicable rules pass:
@@ -70,7 +121,8 @@ A target PR is safe to approve or merge only when all applicable rules pass:
   `SKIPPED`; every status context is `SUCCESS`. No required check is missing,
   pending, queued, stale, cancelled, timed out, action-required, or failing.
 - There are no unresolved review threads requesting changes.
-- The PR passes exactly one diff gate below.
+- The Dependency Necessity Check passes and the PR passes exactly one diff gate
+  below.
 
 ### Standard Dependency Gate
 
@@ -78,6 +130,8 @@ A target PR is safe to approve or merge only when all applicable rules pass:
   dependency metadata, or generated dependency files expected for that
   ecosystem.
 - The update is low risk. Patch and minor updates are normally eligible.
+- A manifest-and-lockfile-only removal of a proven-unused direct dependency is
+  normally eligible.
 - Major framework, runtime, build-tool, compiler, or other compatibility-sensitive
   updates must use the Major Upgrade Remediation Gate. Do not stop merely because
   an update crosses a major version.
@@ -103,6 +157,9 @@ under `manage` or `merge-if-safe` only when all conditions below pass:
   workflows before editing.
 - Reproduce current CI or build failures and distinguish dependency
   incompatibilities from transient infrastructure failures.
+- Before implementing an upgrade migration, decide whether the dependency should
+  still exist. If the migration removes its final required usage, remove the
+  dependency and do not retain the new version.
 - Implement only the compatibility changes required by the update. Source,
   configuration, workflow, and test changes are allowed under this gate when
   directly caused by the major upgrade; unrelated cleanup is not.
@@ -131,6 +188,9 @@ under `manage` or `merge-if-safe` only when all conditions below pass:
   complete diff, and drive CI to a terminal state. Diagnose deterministic
   failures from logs, apply focused fixes, and repeat while the execution budget
   permits.
+- For agent-authored remediation or removal commits, request an independent code
+  review on the final head when the repository provides one. Wait for its bounded
+  result before approval; re-enter remediation for actionable findings.
 - The final head must have green required checks, no unresolved review threads,
   and no unaddressed breaking-change evidence. Otherwise leave the PR open and
   report the exact remaining blocker and failed validation.
@@ -168,6 +228,11 @@ If any evidence is missing or unverifiable, the applicable gate fails.
 
 ## Branch Recovery and CI
 
+- In an unattended one-shot invocation, never leave a decision-critical shell
+  command running in the background. Poll with individual foreground reads or
+  bounded loops that complete within 4 minutes. If a tool backgrounds a command,
+  consume its terminal result with the matching read tool before ending the turn;
+  a completion notification cannot start another one-shot model turn.
 - Branch recovery is allowed only for an open, non-draft, Dependabot-authored PR
   under an active management request. Before writing, prove that all branch
   commits are Dependabot-authored and that no human edits need preservation.
@@ -198,13 +263,19 @@ If any evidence is missing or unverifiable, the applicable gate fails.
 
 When the requested action authorizes approval and merge:
 
-1. Approve only after the current head passes every safety rule.
-2. Refresh the PR because approval may recalculate branch protection or trigger
+1. Repeat the Dependency Necessity Check on the final head. Approve only after
+   that check and every safety rule pass.
+2. If an independent review was requested for agent-authored changes, wait for it
+   to complete and inspect every finding before approval.
+3. Refresh the PR because approval may recalculate branch protection or trigger
    checks.
-3. Wait for checks on the current head to become terminal.
-4. Merge only when the refreshed PR is approved, mergeable, clean, and green.
-5. Prefer the repository's established merge strategy; otherwise prefer squash.
-6. Refresh once after a transient merge failure and retry once only if all
+4. Wait for checks on the current head to become terminal.
+5. If the refreshed review decision remains `REVIEW_REQUIRED` because the
+   current actor cannot satisfy code-owner or required-review policy, stop with
+   that terminal blocker. Do not poll waiting for an external human.
+6. Merge only when the refreshed PR is approved, mergeable, clean, and green.
+7. Prefer the repository's established merge strategy; otherwise prefer squash.
+8. Refresh once after a transient merge failure and retry once only if all
    safety conditions still pass.
 
 Example `gh` fallback:
@@ -256,6 +327,8 @@ Return a concise, self-contained report for this one PR:
 - Repository, PR number, title, and clickable URL.
 - Requested action and final outcome.
 - Dependency or action version transitions and update type.
+- For removal, report the transition as `OLD_VERSION -> removed`, why no required
+  usage remains, and whether any transitive copy remains.
 - Diff scope and safety gate applied.
 - Final head SHA, merge state, review decision, and CI summary.
 - Actions attempted, including rerun, rebase, recreate, approval, merge,

@@ -152,7 +152,7 @@ jobs:
 
           Do not list, inspect, comment on, approve, merge, or otherwise modify any other pull request.
 
-          For an eligible compatibility-sensitive major update, you are authorized to clone the target repository, make the minimum source/configuration/test changes required by that update, commit them conventionally, and push normally to this PR's existing head branch. Do not create a replacement PR, combine sibling updates, or force-push.
+          For every direct dependency update, prove the dependency is still needed before retaining it and repeat that check after remediation. If no required usage remains, remove it with the ecosystem package manager and update this target PR's title/body to describe the removal. For an eligible compatibility-sensitive major update, you are authorized to clone the target repository, make the minimum source/configuration/test changes required by that update, commit them conventionally, and push normally to this PR's existing head branch. Do not create a replacement PR, combine sibling updates, or force-push.
 
           The 'workflowRunUrl' is ${WORKFLOW_RUN_URL}. Return the complete final response required by the agent contract. Do not send any notification."
           if [ "$DRY_RUN" = "true" ]; then
@@ -179,7 +179,7 @@ jobs:
           set -e
 
           jq -rs \
-            '[.[] | select(.type == "assistant.message" and .data.phase == "final_answer") | .data.content] | last // ""' \
+            '[.[] | select(.type == "assistant.message" and .data.phase == "final_answer") | .data.content | select(type == "string" and test("\\S"))] | last // ""' \
             "$RAW_RESPONSE_FILE" > "$RESPONSE_FILE"
 
           if ! head -n 1 "$RESPONSE_FILE" | grep -Eq '^Decision: (MERGED|NOT_MERGED|DRY_RUN_NO_ACTION)$'; then
