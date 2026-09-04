@@ -21,3 +21,4 @@ After creating or updating a pull request, follow this post-PR workflow.
 ## 3. Assign Review on Success
 
 - Once **all** CI workflows pass, assign `@copilot` as a reviewer on the pull request for code review.
+- After CI reaches a terminal state and before reporting the PR ready or drafting a review-thread reply, refresh the PR review comments and reviews. Address any newly added unresolved feedback first.
