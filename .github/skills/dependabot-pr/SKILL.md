@@ -1,7 +1,7 @@
 ---
 name: dependabot-pr
-description: "Interact with one specified Dependabot pull request. Use when: fetching current PR state, issuing and verifying @dependabot commands, approving or merging after the caller has authorized the action, or checking the result of a write. This skill does not decide whether a PR is safe or mergeable."
-argument-hint: '<PR URL or OWNER/REPO#NUMBER> <operation, e.g. inspect, rebase, recreate, approve, merge, ignore>'
+description: "Interact with one specified Dependabot pull request. Use when: fetching current PR state, updating a branch, issuing and verifying @dependabot commands, upserting a management-result comment, approving or merging after the caller has authorized the action, or checking the result of a write. This skill does not decide whether a PR is safe or mergeable."
+argument-hint: '<PR URL or OWNER/REPO#NUMBER> <operation, e.g. inspect, update-branch, rebase, comment-result, approve, merge>'
 ---
 
 # Dependabot Pull Request Interaction
@@ -34,12 +34,38 @@ Use GitHub tools or `gh`. Return raw current state to the caller without making 
 safety decision.
 
 ```powershell
-gh pr view PR_NUMBER --repo OWNER/REPO --json number,title,url,state,author,baseRefName,headRefName,headRefOid,isDraft,mergeStateStatus,reviewDecision,mergeable,files,commits,statusCheckRollup
+gh pr view PR_NUMBER --repo OWNER/REPO --json number,title,url,state,author,baseRefName,baseRefOid,headRefName,headRefOid,headRepository,headRepositoryOwner,isCrossRepository,isDraft,mergeStateStatus,reviewDecision,mergeable,files,commits,statusCheckRollup
 gh pr diff PR_NUMBER --repo OWNER/REPO
 ```
 
 Record the current head SHA before a write. After any head-SHA change, fetch the
 PR again instead of reusing earlier state.
+
+## Update the PR Branch
+
+Use GitHub's update-branch operation only when the caller has authorized a
+conflict-free base merge that must preserve existing head commits.
+
+```powershell
+gh api --method PUT repos/OWNER/REPO/pulls/PR_NUMBER/update-branch `
+  -f expected_head_sha=RECORDED_HEAD_SHA
+```
+
+Verify that:
+
+- GitHub accepted the expected head SHA.
+- The head SHA changed and the PR remains open.
+- Every commit the caller required preserving remains an ancestor of the new
+  head.
+- The resulting merge commit's first parent matches the recorded old head.
+- The actual base parent equals or descends from the audited base SHA and belongs
+  to the target's current base-branch history.
+
+Return the old head SHA, audited base SHA, actual applied-base parent SHA, new
+merge SHA, and preserved ancestor SHA. An expected-SHA mismatch, conflict
+response, unchanged head, invalid base ancestry, parent mismatch, or lost
+remediation ancestry is a failed operation. Do not retry with a different SHA
+unless the caller reauthorizes from freshly audited state.
 
 ## Dependabot Commands
 
@@ -114,6 +140,30 @@ gh pr merge PR_NUMBER --repo OWNER/REPO --squash --delete-branch
 After approval, fetch the PR and report the current review decision. After a
 merge attempt, fetch `state`, `mergedAt`, `mergeable`, and `mergeStateStatus`.
 Retry only when the caller explicitly requests it.
+
+## Upsert a Management Result Comment
+
+When the caller authorizes a final result comment:
+
+1. Include the marker `<!-- dependabot-pr-manager-result -->`.
+2. Include one valid hidden `dependabot-pr-manager-provenance` JSON line.
+3. Include one valid hidden `dependabot-pr-manager-state` JSON line and verify
+   repository, PR number, head SHA, and decision against fresh GitHub state.
+   Reject target identity or author mismatches even for incomplete fallback
+   reports; a result marker does not establish a valid target.
+4. Find the current authenticated actor's existing issue comment containing that
+   unique marker.
+5. Before replacement, prove the new ledger contains every verified remediation
+   and update-branch entry in the existing ledger. Missing entries fail closed;
+   never overwrite the prior comment.
+6. Update the existing comment through
+   `PATCH /repos/OWNER/REPO/issues/comments/COMMENT_ID`; otherwise create it
+   through `POST /repos/OWNER/REPO/issues/PR_NUMBER/comments`.
+7. Verify and return the comment URL and body.
+
+Never post more than one marked result comment per target PR. Do not post in
+dry-run mode or when target validation failed. A malformed or incomplete manager
+response must not replace an existing marked comment.
 
 ## Return the Operation Result
 

@@ -15,7 +15,12 @@ After creating or updating a pull request, follow this post-PR workflow.
 ## 2. Handle CI Failures
 
 - If **any** CI workflow fails, retrieve the CI job logs using the `get-ci-logs` skill.
-- Diagnose the failure from the logs, fix the errors in the code, commit, and push to the PR branch.
+- Classify each failure as caused by the PR, flaky/transient, unrelated, or
+  indeterminate. Compare the merge base or a current default-branch run when
+  needed to establish causality.
+- Fix, commit, and push only failures caused by the PR. Do not change source,
+  tests, snapshots, timeouts, or CI configuration for flaky, unrelated, or
+  indeterminate failures; report those failures and their evidence instead.
 - After pushing the fix, restart polling from step 1.
 
 ## 3. Assign Review on Success
