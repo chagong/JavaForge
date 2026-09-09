@@ -28,6 +28,8 @@ Determine the `owner/repo` from the user's input. Accept any of:
 
 The script is at [scripts/dependabot_alerts.py](./scripts/dependabot_alerts.py). All commands follow this pattern:
 
+On Windows, use `py` in place of `python` if only the Python launcher is installed.
+
 ```
 python .github/skills/dependabot-alerts/scripts/dependabot_alerts.py <owner/repo> <command> [options]
 ```
@@ -68,6 +70,7 @@ python .github/skills/dependabot-alerts/scripts/dependabot_alerts.py owner/repo 
 The script uses `GITHUB_TOKEN` env var, or falls back to `gh auth token` (GitHub CLI). Dependabot alerts API requires at minimum read access to Dependabot alerts on the repo.
 
 ## Notes
+- When using `gh api` for pagination, use `--paginate --jq` to filter each page, or `--paginate --slurp` and parse the result separately. Do not combine `--slurp` with `--jq` or `--template`; the CLI rejects that combination.
 - Dependabot must be enabled on the target repo.
 - Alert `state` can be: `open`, `dismissed`, `fixed`, `auto_dismissed`.
 - Dismissed reasons: `fix_started`, `inaccurate`, `no_bandwidth`, `not_used`, `tolerable_risk`.

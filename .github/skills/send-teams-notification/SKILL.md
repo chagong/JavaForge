@@ -11,6 +11,12 @@ Send messages to Microsoft Teams personal chat via an Azure Logic App HTTP trigg
 
 This skill posts a JSON payload to a configured Logic App endpoint, which delivers a message directly to a specified recipient's Teams personal chat. It can be used for any type of notification — reports, alerts, status updates, action items, or general messages.
 
+When WorkIQ is available, prefer the `workiq` skill and its Teams entity tools; that transport does not require `PERSONAL_NOTIFICATION_URL`. Choose one transport, and never switch transports to retry an ambiguous send.
+
+For WorkIQ chat messages, use `{"body":{"contentType":"html","content":"..."}}` without explicit `@odata.type` annotations. Teams can reject the schema-suggested `itemBody` type because its message endpoint expects `chatMessageBody`.
+
+The instructions below apply only to the Logic App transport.
+
 ## Usage
 
 ### Required Environment Variable
@@ -55,7 +61,7 @@ For the full JSON schema, see [references/payload-schema.json](references/payloa
 ## Workflow
 
 1. Receive JSON payload from user or another skill/agent
-2. **BLOCKING: Check that `PERSONAL_NOTIFICATION_URL` is set** — run `echo $env:PERSONAL_NOTIFICATION_URL` (PowerShell) or `echo $PERSONAL_NOTIFICATION_URL` (bash) and confirm it is non-empty. If it is empty or not set, **stop and ask the user** to provide the URL before proceeding. Do NOT attempt to send without a valid URL.
+2. **BLOCKING: Resolve `PERSONAL_NOTIFICATION_URL`** using the [environment variable resolution instructions](../../instructions/env-variables.instructions.md). Check only whether the value is non-empty; never print the secret URL. If resolution fails, stop and ask the user to configure it before using the Logic App transport.
 3. Validate that required fields are present (especially `recipient`)
 4. POST the JSON payload to the Logic App endpoint
 5. Report success or failure to the user

@@ -88,11 +88,17 @@ Every repo has unit tests that must pass locally before submitting a PR.
 | `repos/vscode-java-debug/` | `npm test` | Mocha | — |
 | `repos/java-debug/` | `./mvnw clean verify` | JUnit 4 + EasyMock | Requires JDK 21+ |
 | `repos/vscode-java-test/` | `npm run build-plugin && npm test` | Mocha + Maven | Build Java plugin first |
-| `repos/vscode-gradle/` | `./gradlew build testVsCode` | Mocha + JUnit + Gradle | Build JARs first: `cd extension && ../gradlew buildJars` |
+| `repos/vscode-gradle/` | `./gradlew build testVsCode` | Mocha + JUnit + Gradle | Build JARs in a separate invocation first: `cd extension && ../gradlew buildJars` |
 | `repos/vscode-java-dependency/` | `npm run build-server && npm test` | Mocha + Maven | Build Java plugin first |
 | `repos/vscode-maven/` | `npm run build-plugin && npm test` | Mocha + Maven | Build Java plugin first |
 | `repos/vscode-spring-initializr/` | `npm test` | Mocha | — |
 | `repos/vscode-spring-boot-dashboard/` | `npm test` | Mocha | Build Java plugin first: `npm run prepublish` |
+
+On Windows, `NoDefaultCurrentDirectoryInExePath=1` can prevent child processes
+from finding bare `gradlew` or `mvnw` commands despite the wrappers being present.
+Add the actual wrapper directories to the process-local `PATH` (for example,
+`extension\build-server-for-gradle` and `extension\jdtls.ext` in `vscode-gradle`).
+Do not unset the search-path protection or change global environment settings.
 
 ### 2. UI Tests Must Pass (Where Applicable)
 
