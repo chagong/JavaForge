@@ -4,6 +4,12 @@ description: "Use when: creating or updating pull requests, pushing PR commits, 
 
 # PR Workflow
 
+Before using the app's PR creation tool, ensure the session's repository matches
+the target repository. For a clone under `repos/`, use a session in that repository's
+project; changing the shell directory does not retarget the session-scoped PR tool.
+Push the session branch before calling the PR creation tool; an unpublished head
+can cause GitHub to reject creation with HTTP 422.
+
 After creating or updating a pull request, follow this post-PR workflow.
 
 ## 1. Poll CI Status
@@ -11,6 +17,10 @@ After creating or updating a pull request, follow this post-PR workflow.
 - After the PR is created (or new commits are pushed), poll the CI workflow status every **5 minutes** until all PR CI workflows reach a terminal state (success or failure).
 - Use the GitHub API to check the status of all workflow runs associated with the PR's head SHA.
 - Do not stop polling until every required workflow has completed.
+- An external pipeline trigger suggested by a bot comment is not necessarily
+  required. Check both classic branch protection and active branch rulesets
+  before treating an untriggered pipeline as a readiness blocker; report an
+  optional trigger separately.
 
 ## 2. Handle CI Failures
 
