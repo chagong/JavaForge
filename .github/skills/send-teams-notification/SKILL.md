@@ -11,7 +11,7 @@ Send messages to Microsoft Teams personal chat via an Azure Logic App HTTP trigg
 
 This skill posts a JSON payload to a configured Logic App endpoint, which delivers a message directly to a specified recipient's Teams personal chat. It can be used for any type of notification — reports, alerts, status updates, action items, or general messages.
 
-When WorkIQ is available, prefer the `workiq` skill and its Teams entity tools; that transport does not require `PERSONAL_NOTIFICATION_URL`. Choose one transport, and never switch transports to retry an ambiguous send.
+When the agent host exposes an externally installed `workiq` skill and its Teams tools, prefer that integration; it is not bundled with this repository and does not require `PERSONAL_NOTIFICATION_URL`. If unavailable, use the Logic App workflow below. Choose one transport, and never switch transports to retry an ambiguous send.
 
 For WorkIQ chat messages, use `{"body":{"contentType":"html","content":"..."}}` without explicit `@odata.type` annotations. Teams can reject the schema-suggested `itemBody` type because its message endpoint expects `chatMessageBody`.
 
