@@ -28,10 +28,14 @@ Determine the `owner/repo` from the user's input. Accept any of:
 
 The script is at [scripts/dependabot_alerts.py](./scripts/dependabot_alerts.py). All commands follow this pattern:
 
-On Windows, use `py` in place of `python` if only the Python launcher is installed.
-
 ```
 python .github/skills/dependabot-alerts/scripts/dependabot_alerts.py <owner/repo> <command> [options]
+```
+
+On Windows, use `py` in place of `python` if only the Python launcher is installed:
+
+```powershell
+py .github\skills\dependabot-alerts\scripts\dependabot_alerts.py <owner/repo> <command> [options]
 ```
 
 #### Available Commands

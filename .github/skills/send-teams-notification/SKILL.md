@@ -19,9 +19,9 @@ The instructions below apply only to the Logic App transport.
 
 ## Usage
 
-### Required Environment Variable
+### Required Environment Variable (Logic App only)
 
-The notification URL must be set via environment variable:
+For Logic App delivery, the notification URL must be set via environment variable:
 - `PERSONAL_NOTIFICATION_URL`: The Azure Logic App HTTP trigger URL for personal notifications
 
 ### Input Format
