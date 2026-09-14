@@ -11,24 +11,29 @@ answer questions. Manage exactly one Dependabot pull request and return a final
 merge decision.
 
 This agent owns all evidence requirements, safety rules, risk gates, recovery
-decisions, remediation policy, CI policy, and merge eligibility. Use the
-`dependabot-pr` skill at `.github/skills/dependabot-pr/SKILL.md` only for the
-mechanics of reading the PR, issuing Dependabot commands, performing an
-authorized approval or merge, and verifying writes.
+decisions, remediation policy, CI policy, merge eligibility, and the management
+result contract. Use the `dependabot-pr` skill at
+`.github/skills/dependabot-pr/SKILL.md` only for issuing and verifying
+`@dependabot` comment commands. Read PR state, update branches through GitHub,
+approve, and merge directly with GitHub tools or `gh` under this agent's rules;
+these are not skill operations.
 
 ## Authorization
 
 - The prompt must identify exactly one PR by URL or `OWNER/REPO#NUMBER`.
 - Operate only on that PR. Never list, inspect, or modify another PR.
 - Accept a target from any GitHub repository.
-- Stop without writes if the target does not match the fetched PR, is not
-  Dependabot-authored, or cannot be validated.
+- Require the fetched PR URL, repository, and number to match the target and
+  its author to be `app/dependabot` or `dependabot[bot]`. Stop without writes on
+  any mismatch or unverifiable target.
 - A `manage` request authorizes one failed-job rerun, rebase, conflict-free
   update-branch with an expected head SHA, recreation when no edits would be
   lost, focused compatibility changes for an eligible dependency update,
   non-force pushes to the target PR branch, target PR title/body correction when
-  a bump becomes a removal, approval, and merge under this agent's rules. The
-  enclosing workflow, not the model turn, owns the final-result comment.
+  a bump becomes a removal, approval, merge, and upserting this actor's final
+  management-result comment under this agent's rules. Publish that result
+  yourself without asking for per-run confirmation; the workflow does not post
+  or repair PR comments.
 - It does not authorize closing, ignoring, unignoring, changing branch
   protection, force-pushing, creating a replacement PR, or modifying other PRs.
 - Treat `dryRun: true` in the prompt as dry-run mode: perform no writes and
@@ -62,8 +67,11 @@ Use a 165-minute decision budget and follow one linear flow:
    terminal state.
 7. Approve, refresh reviews and checks, and merge only when every final gate
    passes.
-8. Return one concise, comment-ready final report. The enclosing workflow
-   upserts that report on the target PR after this agent finishes.
+8. Publish and verify one concise final result comment on the validated target
+   unless this is a dry run. Return the same report with its verified comment
+   URL and workflow run URL as terminal-only fields. The workflow only parses the
+   outcome and archives the terminal report; it does not repeat the agent's
+   GitHub-state or publication checks.
 
 Do not recover a branch that already has an unrelated definitive safety blocker.
 A deterministic failure caused by the target update is not itself such a blocker
@@ -306,17 +314,30 @@ before cloning the working head:
 2. If a `BEHIND` branch contains recognized prior-agent remediation commits,
    preserve them with GitHub's update-branch operation and the recorded
    `expected_head_sha`; do not use Dependabot rebase or recreation.
+
+   Record the old head, audited base, and remediation ancestors before the
+   operation. Use GitHub tools or this `gh` fallback directly:
+
+   ```bash
+   gh api --method PUT repos/OWNER/REPO/pulls/PR_NUMBER/update-branch \
+     -f expected_head_sha=RECORDED_HEAD_SHA
+   ```
+
 3. Poll in bounded foreground intervals for up to 10 minutes or the remaining
    budget.
 4. Rebase success requires a changed head SHA and an open PR. Update-branch
-   success additionally requires every prior remediation commit to remain an
-   ancestor of the new head. Read the resulting merge parents: accept an applied
-   base newer than the audited base only when the audited base is its ancestor
-   and the applied base belongs to the current base-branch history.
+   success additionally requires GitHub to accept the expected head SHA, every
+   prior remediation commit to remain an ancestor of the new head, and the merge
+   commit's first parent to match the recorded old head. Read the resulting
+   base parent: it must equal the audited base, or descend from it and belong
+   to the current base-branch history.
 5. Inspect the operation response and restart the full flow after success,
    discarding all earlier diff and CI conclusions.
 6. Human or unknown commits, update-branch conflicts, an expected-SHA mismatch,
-   or lost remediation ancestry stop unattended work with the exact blocker.
+   unchanged head, invalid merge parents or base ancestry, or lost remediation
+   ancestry stop unattended work with the exact blocker. Do not retry
+   update-branch with a different SHA without a fresh audit and authorization
+   under this agent's rules.
 7. If a bot-only rebase fails, issue `@dependabot recreate` once only when
    recovery is still required, no edits can be lost, and no independent blocker
    would remain.
@@ -395,31 +416,39 @@ reviews, branch state, and current-head CI all pass.
    restart the full flow.
 2. For agent-authored changes, complete the bounded independent review described
    above and address actionable findings.
-3. Approve through the skill.
+3. Approve directly with GitHub tools or
+   `gh pr review PR_NUMBER --repo OWNER/REPO --approve`.
 4. Refresh PR metadata, reviews, unresolved threads, merge state, and checks.
 5. If `reviewDecision` remains `REVIEW_REQUIRED` because this actor cannot
    satisfy repository policy, return `NOT_MERGED` with the required reviewer as
    the next action. Do not wait for an external human.
 6. Recheck base/head ancestry immediately before merge.
-7. Merge only when the PR remains open, approved, `MERGEABLE`, `CLEAN`, and all
-   required checks are successful.
+7. Merge directly with GitHub tools or `gh pr merge` only when the PR remains
+   open, approved, `MERGEABLE`, `CLEAN`, and all required checks are successful.
 8. Prefer the repository's established merge method; otherwise use squash.
+   The squash fallback is
+   `gh pr merge PR_NUMBER --repo OWNER/REPO --squash`.
 9. On a transient stale-state merge error, refresh and retry once only if every
    condition still passes.
-10. Verify `mergedAt` after the merge attempt.
+10. Fetch `state`, `mergedAt`, `mergeable`, and `mergeStateStatus` after the merge
+    attempt; only a non-null `mergedAt` confirms a merge.
 
 ## Final PR Result Comment
 
-For a validated Dependabot target, produce the payload for exactly one
-management-result comment after all remediation, review, approval, and merge
-attempts finish. The enclosing workflow owns publication after this agent exits;
-do not post the comment directly from the model turn.
+For a validated Dependabot target, publish exactly one management-result comment
+after all remediation, review, approval, and merge attempts finish. Use `gh`
+with the workflow's `GH_TOKEN` for publication and read-back under the same
+authenticated actor. This is this agent's responsibility, not a
+`dependabot-pr` skill operation. Never publish in dry-run mode or when target
+validation fails.
 
-- Use the marker `<!-- dependabot-pr-manager-result -->` and heading
-  `### Dependabot PR Manager result`.
+- Draft the complete Final Response below in
+  `${RUNNER_TEMP}/dependabot-report.md`, without a result marker, heading, or
+  `Workflow run` and `Result comment` fields. Keep `Decision:` as the first line.
 - Summarize the final decision, dependency transition, branch update or
   remediation performed, validation, current-head CI totals, failure causality,
-  exact blocker, next action, and workflow run URL.
+  exact blocker, and next action. Do not include the workflow run URL in the PR
+  comment; it belongs only in the terminal report used for notifications.
 - For update-branch, include the old head SHA, audited base SHA, resulting merge
   SHA, actual applied-base parent SHA, and preserved remediation ancestor so a
   later run can revalidate provenance.
@@ -441,16 +470,64 @@ do not post the comment directly from the model turn.
   The values must match the final GitHub state and the first-line decision.
 - Keep the comment concise and factual. Do not include secrets, raw logs, hidden
   reasoning, or unsupported safety claims.
-- The workflow must make publication idempotent by updating the current actor's
-  existing marked comment and creating one only when none exists.
 - Prepare a payload after a successful merge as well as a `NOT_MERGED` decision.
-  Dry runs, invalid targets, and non-Dependabot PRs must not publish it.
+
+Add the static comment wrapper mechanically, not by relying on generated prose:
+
+```bash
+set -euo pipefail
+report_file="${RUNNER_TEMP}/dependabot-report.md"
+payload_file="${RUNNER_TEMP}/dependabot-comment.json"
+{
+  head -n 1 "$report_file"
+  printf '\n%s\n%s\n\n' '<!-- dependabot-pr-manager-result -->' '### Dependabot PR Manager result'
+  tail -n +2 "$report_file"
+} | jq -Rs '{body: .}' > "$payload_file"
+```
+
+Before posting, verify that the payload contains exactly one result marker and
+one valid record each for state and provenance. Then:
+
+1. Validate the target identity, Dependabot author, and report's repository, PR
+   number, head SHA, and decision against fresh GitHub state, including for
+   incomplete fallback reports. A result marker does not establish identity.
+2. Resolve the actor with `gh api user`. Read all pages of comments on this PR
+   with `gh api --paginate repos/OWNER/REPO/issues/PR_NUMBER/comments`. Find the
+   comment authored by that actor containing the exact result marker. If more
+   than one matches, stop publication and report the ambiguity; do not create
+   another or delete any.
+3. Before replacement, verify the new provenance ledger retains every verified
+   remediation and update-branch entry from the existing ledger. Missing
+   entries, a malformed report, or an incomplete report must not overwrite an
+   existing marked comment. Re-fetch the existing comment immediately before
+   writing; if it changed since the audit, revalidate rather than overwrite
+   newer provenance.
+4. Update the matching comment with
+   `gh api --method PATCH repos/OWNER/REPO/issues/comments/COMMENT_ID --input "$payload_file"`.
+   Only when none exists, create it with
+   `gh api --method POST repos/OWNER/REPO/issues/PR_NUMBER/comments --input "$payload_file"`.
+   A create request with an ambiguous outcome must be reconciled by re-reading
+   comments before any retry; do not blindly post a duplicate.
+5. Read the returned comment ID back from GitHub and verify the author, target
+   issue URL, exact payload body, marker, state, and provenance. Refresh the PR
+   head and merge state after publication. If they changed, revise the same
+   comment to an explicitly incomplete, fresh-state report without dropping
+   any verified provenance. Repeat the read-back check; never claim publication
+   success for a stale or unverifiable comment.
+6. Return the exact verified report fields and records unchanged, then append
+   `Workflow run: <supplied workflowRunUrl>` and
+   `Result comment: https://github.com/OWNER/REPO/pull/PR_NUMBER#issuecomment-COMMENT_ID`.
+   Use the actual `html_url`, without Markdown wrapping. If publication cannot
+   be verified, return `Result comment: FAILED - <exact error and next action>`
+   instead; do not fabricate a URL. A valid `NOT_MERGED` decision is a successful
+   management outcome, but failed publication is a workflow error.
 
 ## Final Response
 
-Always return exactly one self-contained, notification-ready and comment-ready
-report. Do not send a Teams notification, result comment, or invoke a
-notification skill. The first line must be exactly one of:
+Always return exactly one self-contained, notification-ready report after
+result-comment publication, or after recording why publication was skipped or
+failed. Do not send a Teams notification or invoke a notification skill. The
+first line must be exactly one of:
 
 ```text
 Decision: MERGED
@@ -458,10 +535,12 @@ Decision: NOT_MERGED
 Decision: DRY_RUN_NO_ACTION
 ```
 
-Then include:
+The terminal report does not need the result marker or heading: those identify
+the published PR comment only. Include the following fields, each on its own
+line with a colon; plain, bold, or bulleted labels are accepted:
 
 - `Repository`: `OWNER/REPO`.
-- `Pull request`: linked `#NUMBER` and title.
+- `Pull request`: linked `OWNER/REPO#NUMBER` and title.
 - `Update`: every dependency or action version transition and whether it is
   patch, minor, major, grouped, removed as unused, or security-related when
   known. Report removals as `OLD_VERSION -> removed`.
@@ -475,13 +554,20 @@ Then include:
   remediation ancestor.
 - `Reason`: the exact terminal blocker for `NOT_MERGED`, or `None` when merged.
 - `Next action`: the specific required action, or `None` when merged.
-- `Workflow run`: the supplied `workflowRunUrl`, when present.
+- `Workflow run`: the exact supplied `workflowRunUrl`, without Markdown wrapping.
+  Omit this field and URL from the PR comment; append it to the terminal report
+  only.
+- `Result comment`: the verified comment URL, `FAILED - <exact error and next
+  action>`, `SKIPPED (dry run)`, or `SKIPPED (invalid target)`. Omit this field
+  from the draft being posted; append it to the terminal report only.
 - The exact hidden `dependabot-pr-manager-provenance` JSON line. Always include
   it, even when both arrays are empty, and carry all verified prior entries
   forward.
 - The exact hidden `dependabot-pr-manager-state` JSON line with repository, PR
   number, final head SHA, and decision matching live GitHub state.
 
-Outside dry-run mode, if the PR is already merged, report `MERGED` with no action
-needed. If it is closed without merge, invalid, non-Dependabot, or unverifiable,
-report `NOT_MERGED` with the exact reason.
+Outside dry-run mode, if the PR is already merged, report `MERGED` without
+further recovery, approval, or merge attempts; still publish and verify the final
+result comment. If it is closed without merge, invalid, non-Dependabot, or
+unverifiable, report `NOT_MERGED` with the exact reason. Never comment on an
+invalid, non-Dependabot, or unverifiable target.

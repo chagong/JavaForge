@@ -8,12 +8,13 @@ When writing comments on GitHub issues or pull requests, follow these rules:
 
 ## Workflow
 - **Always show the draft comment to the user and ask for confirmation before posting.** Never post a comment directly without explicit approval.
-- Exception: the unattended Dependabot PR Manager workflow is explicitly
+- Exception: the unattended Dependabot PR Manager agent is explicitly
   authorized to upsert its fixed-format final result comment without per-run
   confirmation. It must operate only on its validated target PR, use the
   `<!-- dependabot-pr-manager-result -->` marker, update the same actor's existing
   marked comment instead of duplicating it, and include only the final outcome,
-  evidence, blocker, and next action.
+  evidence, blocker, and next action. The agent publishes and verifies the
+  comment itself; the workflow only reads its result.
 
 ## Tone
 - Write as a project maintainer — friendly but direct
