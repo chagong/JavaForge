@@ -1,8 +1,9 @@
-# Java tooling sub-repos (cloned by agents as needed)
+# Java tooling backing clones (reused for task worktrees)
 repos/*
 !repos/.gitkeep
 logs/*
 !logs/.gitkeep
+# Task worktrees and temporary build/probe artifacts
 scratch/*
 !scratch/.gitkeep
 **/.vscode-test/

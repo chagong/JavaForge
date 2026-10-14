@@ -19,6 +19,8 @@ For each extension, update **all three** files:
 
 Note: `repos/vscode-gradle/` has its `package.json` and `package-lock.json` under `extension/`, not the repo root.
 
+The `repos/...` paths below identify backing repositories. Follow the task-worktree setup in `.github/copilot-instructions.md` and make release changes in the selected worktree, preserving repository-relative paths.
+
 When verifying `package-lock.json` in PowerShell, use `ConvertFrom-Json -AsHashtable`; npm's root `packages[""]` entry has an empty-string key that the default parser rejects. Check both `$lock['version']` and `$lock['packages']['']['version']` against the version in `package.json`.
 
 ## Changelog Rules
@@ -46,7 +48,7 @@ When verifying `package-lock.json` in PowerShell, use `ConvertFrom-Json -AsHasht
 2. **Search merged PRs** since that date
 3. **Filter** to user-facing changes only
 4. **Determine version bump** (minor vs patch) based on whether features are present
-5. **Create a branch** named `bump-version-{new-version}` from the default branch
+5. **Create or reuse a task worktree** for the branch `bump-version-{new-version}`, based on the current original upstream default branch for a new release task. Do not switch the backing checkout's branch.
     - Default branches: `develop` for `repos/vscode-gradle/`, `main` for all others
 6. **Update** `package.json`, run `npm install --package-lock-only`, update `CHANGELOG.md`
 7. **Commit** with message `bump version to {new-version}`

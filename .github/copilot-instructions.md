@@ -1,6 +1,6 @@
 # Copilot Instructions — Java Extensions for VS Code
 
-This workspace is a development environment for coding agents (GitHub Copilot, Claude Code, etc.) to work on **Java tooling for VS Code**. It may contain any subset of the repositories listed below — agents should clone the repos they need for the task at hand under `repos/`.
+This workspace is a development environment for coding agents (GitHub Copilot, Claude Code, etc.) to work on **Java tooling for VS Code**. It may contain any subset of the repositories listed below — prefer isolated task worktrees backed by reusable clones under `repos/`, and clone only when no suitable backing repository is available.
 
 For detailed architecture, internal APIs, module maps, and communication patterns, see [Java-Tooling-Architecture.md](../javatooling-architecture.md).
 
@@ -8,21 +8,35 @@ For detailed architecture, internal APIs, module maps, and communication pattern
 
 ## Pre-Work Repository Sync
 
-Before starting any new issue investigation, bug fix, feature implementation, or other source-level work, ensure the relevant local repository is in sync with its original upstream default branch. If it is not in sync, use the `/sync-repos` prompt to sync that repo before continuing.
+Before starting a new issue investigation, bug fix, feature implementation, or other source-level task, fetch the relevant repository's original upstream and base the new task worktree on its current default branch. Use the `/sync-repos` prompt to refresh the backing repository without disturbing existing work. A dirty or feature-branch backing checkout can remain unchanged; the fetched upstream ref is sufficient to create a new worktree.
+
+When continuing an existing task or PR, preserve its worktree and branch. Do not switch, reset, or rebase it merely to satisfy the pre-work sync requirement.
 
 ---
 
 ## Scratch Folder
 
-The `scratch/` directory is a gitignored workspace for temporary files — extracted JARs, patched binaries, build artifacts for local testing, etc. Always use `scratch/` instead of creating ad-hoc folders in the workspace root. Contents are excluded from version control; only `.gitkeep` is tracked.
+The `scratch/` directory is a gitignored workspace for task worktrees and temporary files — extracted JARs, patched binaries, build artifacts for local testing, etc. Always use `scratch/` instead of creating ad-hoc folders in the workspace root. Contents are excluded from JavaForge version control; only `.gitkeep` is tracked.
+
+Task worktrees are not disposable scratch artifacts: they may contain uncommitted changes or unpublished commits. Do not delete them during temporary-file cleanup.
 
 ---
 
 ## Repository Folder
 
-The `repos/` directory is the workspace home for all cloned Java tooling repositories and upstream dependencies. Keep the folder itself in the workspace with `repos/.gitkeep`, but keep cloned repositories ignored by version control. Do not clone Java tooling repositories into the workspace root.
+The `repos/` directory holds reusable backing clones of Java tooling repositories and upstream dependencies, not the default editing workspace. Keep the folder itself in the workspace with `repos/.gitkeep`, but keep cloned repositories ignored by version control. Do not clone Java tooling repositories into the workspace root.
 
-Before using GitHub APIs for source lookup, inspect the relevant canonical path under `repos/<repo>/` directly. If a recursive search reports no match, list `repos/` and check the mapped repository path before concluding that the repository is not cloned.
+### Preferred Task Worktrees
+
+1. Reuse an existing worktree when it belongs to the requested task, including a user-provided or app-managed worktree. Otherwise, locate the backing clone at the canonical `repos/<repo>/` path or an explicitly supplied local path. Verify that its original upstream matches the repository in the table below before reusing it. Clone into the canonical path only when no suitable backing clone exists; never overwrite an unrelated repository at that path.
+2. Refresh the original upstream as described in "Pre-Work Repository Sync". Identify its actual default branch from remote metadata; do not assume `origin` is the original upstream or that the branch is `main`.
+3. Inspect `git worktree list --porcelain` in the backing repository. For a new task, create a uniquely named branch and worktree at `scratch\worktrees\<repo>\<task>`, using `git worktree add -b <task-branch> <absolute-task-path> <upstream>/<default-branch>`. Resolve the task path from the JavaForge root before running Git from another directory. For an existing PR, use its head branch or exact recorded SHA instead of the default branch. Never use `-B` or force options to replace another task's branch or worktree.
+4. Run source searches, edits, dependency installation, builds, tests, and task Git commands in the selected worktree. The `repos/...` paths in the tables below identify backing repositories; substitute the task worktree root while preserving repository-relative paths.
+5. Handle nested repositories separately. A `vscode-gradle` worktree does not automatically include the independent Build Server for Gradle repository. When needed, create or reuse a worktree of that repository at `<gradle-task-worktree>\extension\build-server-for-gradle`, backed by its own clone.
+
+Respect explicit in-place requests and host/session restrictions on creating branches or worktrees. This preference does not authorize switching the JavaForge checkout or discarding existing work. If a worktree cannot be created within those restrictions, ask before falling back to editing the backing clone.
+
+Before using GitHub APIs for source lookup, inspect the selected task worktree, then the canonical backing path under `repos/<repo>/`. If a recursive search reports no match, check the mapped backing path and, when it exists, `git worktree list --porcelain` before concluding that the source is unavailable.
 
 ---
 
@@ -168,7 +182,7 @@ Every repo runs CI on pull requests. A PR cannot be merged until all CI checks a
 
 ### 6. Cross-Repo Impact Awareness
 
-**Always use the canonical repo list** from the "Repositories in This Workspace" table above when performing cross-repo tasks (e.g., auditing Dependabot alerts, checking CI status, searching for patterns). Do **not** rely on which directories happen to exist locally — the workspace may contain only a subset of the repos. For repos not cloned locally, use GitHub API tools (MCP, `gh`, or skill scripts) to query them, and clone only when changes are needed.
+**Always use the canonical repo list** from the "Repositories in This Workspace" table above when performing cross-repo tasks (e.g., auditing Dependabot alerts, checking CI status, searching for patterns). Do **not** rely on which directories happen to exist locally — the workspace may contain only a subset of the repos. Use GitHub API tools (MCP, `gh`, or skill scripts) for metadata-only queries when no local source is needed. When local source is needed, follow the worktree setup above; absence from `repos/` alone does not mean no suitable clone or worktree exists.
 
 Many features span multiple repos. Be aware of these common patterns:
 - **Language features** (completion, diagnostics, refactoring): Changes typically go in `repos/eclipse.jdt.core/` or `repos/eclipse.jdt.ls/`, exposed to VS Code via `repos/vscode-java/`.

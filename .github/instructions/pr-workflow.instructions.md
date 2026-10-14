@@ -5,14 +5,17 @@ description: "Use when: creating or updating pull requests, pushing PR commits, 
 # PR Workflow
 
 Before using the app's PR creation tool, ensure the session's repository matches
-the target repository. For a clone under `repos/`, use a session in that repository's
-project; changing the shell directory does not retarget the session-scoped PR tool.
+the target repository. For sub-repository work, use a session belonging to that
+repository and its task worktree (or an explicitly requested in-place checkout),
+not the JavaForge session. Follow the workspace selection rules in
+`.github/copilot-instructions.md`; changing the shell directory does not retarget
+the session-scoped PR tool.
 Push the session branch before calling the PR creation tool; an unpublished head
 can cause GitHub to reject creation with HTTP 422.
 
-For `gh pr checkout`, first change the shell directory to the target clone.
+For `gh pr checkout`, first change the shell directory to the target task worktree.
 `--repo` selects the remote PR but does not change which local repository is
-modified. Confirm the target clone's branch immediately after checkout.
+modified. Confirm the worktree's repository and branch immediately after checkout.
 
 After creating or updating a pull request, follow this post-PR workflow.
 

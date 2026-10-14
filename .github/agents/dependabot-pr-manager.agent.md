@@ -247,13 +247,20 @@ or causes a deterministic CI failure, but only when all conditions pass:
 To perform remediation:
 
 1. Complete branch recovery first.
-2. Clone the target repository into a temporary directory, fetch the target PR
-   head, check out the exact recorded SHA, and verify the checkout. Never use the
-   workflow repository as a substitute for the target.
+2. Reuse a backing clone only after verifying that a remote matches the target
+   repository, and record that target remote; clone the target under `repos/`
+   only if no suitable clone exists.
+   Fetch the target PR head and create an isolated worktree under
+   `scratch/worktrees/` at the exact recorded SHA. Verify the worktree's repository
+   and HEAD, and run all remediation, validation, commit, and push commands there.
+   Never use the workflow repository as a substitute for the target or switch an
+   existing checkout's branch.
 3. Implement the smallest complete migration or removal and validate it.
-4. Configure repository-local Git identity, create a conventional commit with
-   any required sign-off or trailers, and push normally to the target branch.
-   Never force-push.
+4. Set Git identity per commit command, without changing the backing repository's
+   shared Git configuration. Create a conventional commit with any required
+   sign-off or trailers, and push `HEAD` to the recorded target branch through
+   the verified target remote. Never assume the push remote is `origin` or
+   force-push.
 5. If the dependency was removed, update this PR's title and body to explain the
    removal and why it supersedes the bump.
 6. Re-fetch the PR, verify the new head SHA, and restart the full audit and CI
