@@ -19,6 +19,8 @@ For each extension, update **all three** files:
 
 Note: `repos/vscode-gradle/` has its `package.json` and `package-lock.json` under `extension/`, not the repo root.
 
+When verifying `package-lock.json` in PowerShell, use `ConvertFrom-Json -AsHashtable`; npm's root `packages[""]` entry has an empty-string key that the default parser rejects. Check both `$lock['version']` and `$lock['packages']['']['version']` against the version in `package.json`.
+
 ## Changelog Rules
 
 - Only include **user-facing changes**: features, bug fixes, performance improvements

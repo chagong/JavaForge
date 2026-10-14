@@ -10,6 +10,10 @@ project; changing the shell directory does not retarget the session-scoped PR to
 Push the session branch before calling the PR creation tool; an unpublished head
 can cause GitHub to reject creation with HTTP 422.
 
+For `gh pr checkout`, first change the shell directory to the target clone.
+`--repo` selects the remote PR but does not change which local repository is
+modified. Confirm the target clone's branch immediately after checkout.
+
 After creating or updating a pull request, follow this post-PR workflow.
 
 ## 1. Poll CI Status

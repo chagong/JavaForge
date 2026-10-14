@@ -20,6 +20,7 @@ When writing comments on GitHub issues or pull requests, follow these rules:
 - Write as a project maintainer — friendly but direct
 - Keep it short. 1-3 sentences is ideal. No filler
 - Be precise — state facts, next steps, or decisions clearly
+- Distinguish source inspection and constructed/mocked reproductions from end-to-end verification; claim E2E only after exercising the real project import and launch.
 - Skip greetings like "Hi there!" or "Hello!" — just get to the point
 - Use "Thanks" or "Thanks, [name]!" sparingly and only when someone contributed real effort
 - Never use corporate or formal language ("We appreciate your contribution", "Thank you for reaching out")

@@ -100,6 +100,26 @@ Add the actual wrapper directories to the process-local `PATH` (for example,
 `extension\build-server-for-gradle` and `extension\jdtls.ext` in `vscode-gradle`).
 Do not unset the search-path protection or change global environment settings.
 
+For extension-host probes outside the target extension directory, load `vscode`
+via `require("module").createRequire(targetCompiledModulePath)("vscode")` before
+stubbing APIs. VS Code returns extension-scoped API objects; a direct import from
+an external probe can stub a different object from the code under test.
+
+Remote-workspace probes must model the extension's execution host. Workspace
+extensions normally receive `file` URIs after VS Code converts incoming
+`vscode-remote` URIs; do not inject UI-side URIs into that host model.
+
+For multi-root configuration tests, open a `.code-workspace` file when starting
+the test host; converting a single-folder host in a test hook can leave
+`updateWorkspaceFolders` waiting without a workspace-change event.
+
+Verify extension-host error logging through captured host output; overriding a
+probe's `console.error` may not intercept another module's console object.
+
+For launch-candidate merges, cover all-test discoveries with valid, absent, and
+rejected custom launchers. Mixed production/test fixtures do not exercise the
+all-test fallback.
+
 ### 2. UI Tests Must Pass (Where Applicable)
 
 Some repos have dedicated UI test workflows that validate end-to-end behavior:

@@ -39,6 +39,8 @@ For a PR URL with job name:
 python .github/skills/get-ci-logs/get_ci_logs.py "<PR_URL>" "<JOB_NAME>"
 ```
 
+On Windows, if `python` is not on PATH, use `py -3 .github\skills\get-ci-logs\get_ci_logs.py` with the same arguments.
+
 The script:
 1. Parses the PR URL to extract owner/repo/PR number
 2. Gets the PR head SHA via GitHub API
